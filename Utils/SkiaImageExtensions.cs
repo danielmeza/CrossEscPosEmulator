@@ -19,4 +19,12 @@ public static class SkiaImageExtensions
         stream.Position = 0;
         return new Bitmap(stream);
     }
+
+    /// <summary>Encodes the bitmap to PNG and writes it to the given stream.</summary>
+    public static void SavePng(this SKBitmap source, Stream destination)
+    {
+        using var image = SKImage.FromBitmap(source);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        data.SaveTo(destination);
+    }
 }

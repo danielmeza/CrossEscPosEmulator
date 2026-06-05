@@ -8,6 +8,8 @@
 - Listens for ESC/POS commands over **TCP/IP** and (optionally) a **serial port**
 - Logs commands and visually represents the resulting receipt(s)
 - Renders 1D barcodes and 2D QR codes, and signals buzzer / cash-drawer events
+- Configure the TCP listen address/port and serial port live from the UI
+- Export rendered tickets to PNG — all in one image, or one file per cut
 - It support different text formattings in the same line, although a few combinations were tested.
 
 > **Cross-platform fork.** This project began as a cross-platform port of
@@ -81,12 +83,16 @@ Contributions welcome — new commands follow the simple `BaseCommand` pattern i
 
 ### Connecting
 
-The emulator accepts ESC/POS data over two transports, both configurable via environment variables:
+The emulator accepts ESC/POS data over two transports. Both can be changed **live from the UI**
+(left panel): pick a TCP listen address and port and Start/Stop the listener, or select a serial
+port + baud and Open/Close it (⟳ refreshes the port list). The environment variables below set the
+**initial** values at startup:
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `ESCPOS_TCP_PORT` | `9100` | TCP listen port. Set to `off` / `0` to disable TCP. |
-| `ESCPOS_SERIAL_PORT` | *(unset)* | Serial device to open (e.g. `/dev/ttys004`, `COM3`). Unset = serial disabled. |
+| `ESCPOS_LISTEN_ADDRESS` | `0.0.0.0` | Initial TCP bind address (`0.0.0.0` = all interfaces, `127.0.0.1` = localhost). |
+| `ESCPOS_TCP_PORT` | `9100` | Initial TCP listen port. Set to `off` / `0` to start with TCP stopped. |
+| `ESCPOS_SERIAL_PORT` | *(unset)* | Serial device to auto-open (e.g. `/dev/ttys004`, `COM3`). Unset = serial closed. |
 | `ESCPOS_SERIAL_BAUD` | `9600` | Serial baud rate. |
 | `ESCPOS_DEBUG_DUMP` | *(off)* | Set to `1` to dump every received payload to `last_*` files. |
 
@@ -136,6 +142,14 @@ fragmented serial writes (commands split across packets) are handled correctly.
 **Windows** — install [com0com](https://com0com.sourceforge.net/) and create a linked pair
 (e.g. `COM3` ↔ `COM4`). Run the emulator with `ESCPOS_SERIAL_PORT=COM3` and have your application
 write to `COM4`.
+
+### Exporting tickets
+
+Each cut (`ESC i` / `ESC m` / `GS V`) starts a new receipt — a "page". The **Export** buttons in the
+left panel save the rendered tickets as PNG:
+
+- **Export all (single image)** — stacks every receipt into one tall PNG (a save dialog).
+- **Export each cut (folder)** — writes one `receipt_NNN.png` per cut into a chosen folder.
 
 ### Building & running
 

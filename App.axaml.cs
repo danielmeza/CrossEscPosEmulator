@@ -3,7 +3,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using ReceiptPrinterEmulator.Emulator;
-using ReceiptPrinterEmulator.Networking;
 using ReceiptPrinterEmulator.Services;
 using ReceiptPrinterEmulator.ViewModels;
 using ReceiptPrinterEmulator.Views;
@@ -12,9 +11,6 @@ namespace ReceiptPrinterEmulator;
 
 public partial class App : Application
 {
-    private NetServer? _server;
-    private SerialServer? _serial;
-
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -25,52 +21,38 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var printer = new ReceiptPrinter(PaperConfiguration.Default);
-
-            // TCP transport — port via ESCPOS_TCP_PORT (default 9100). Set it to "off"/"0" to disable.
-            _server = TryCreateTcp(printer);
-            if (_server is not null)
-                _ = _server.Run();
-
-            // Optional serial transport — enabled by setting ESCPOS_SERIAL_PORT
-            // (e.g. /dev/ttys005 from a socat PTY pair, or COM3). Baud via ESCPOS_SERIAL_BAUD.
-            _serial = TryCreateSerial(printer);
-            if (_serial is not null)
-                _ = _serial.Run();
-
             var notifications = new NotificationService();
-            var viewModel = new MainWindowViewModel(printer, notifications, _server, _serial);
+            var dialogs = new FileDialogService();
+
+            // Initial transport settings come from environment variables; the UI can change them at
+            // runtime. ESCPOS_TCP_PORT ("off"/"0" disables auto-start), ESCPOS_SERIAL_PORT / _BAUD.
+            var (tcpEnabled, tcpPort) = ReadTcpSettings();
+            var serialPort = Environment.GetEnvironmentVariable("ESCPOS_SERIAL_PORT");
+            int serialBaud = int.TryParse(Environment.GetEnvironmentVariable("ESCPOS_SERIAL_BAUD"), out var b) ? b : 9600;
+            var listenAddress = Environment.GetEnvironmentVariable("ESCPOS_LISTEN_ADDRESS") ?? "0.0.0.0";
+
+            var viewModel = new MainWindowViewModel(printer, notifications, dialogs,
+                listenAddress, tcpPort, tcpEnabled,
+                string.IsNullOrWhiteSpace(serialPort) ? null : serialPort, serialBaud);
 
             var window = new MainWindow { DataContext = viewModel };
             notifications.AttachWindow(window);
+            dialogs.AttachTopLevel(window); // Window is a TopLevel
             desktop.MainWindow = window;
 
-            desktop.ShutdownRequested += (_, _) =>
-            {
-                _server?.Stop();
-                _serial?.Stop();
-            };
+            desktop.ShutdownRequested += (_, _) => viewModel.Shutdown();
         }
 
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static NetServer? TryCreateTcp(ReceiptPrinter printer)
+    private static (bool enabled, int port) ReadTcpSettings()
     {
         var setting = Environment.GetEnvironmentVariable("ESCPOS_TCP_PORT");
         if (setting is "off" or "none" or "disabled" or "0")
-            return null;
+            return (false, 9100);
 
         int port = int.TryParse(setting, out var p) && p > 0 ? p : 9100;
-        return new NetServer(printer, port);
-    }
-
-    private static SerialServer? TryCreateSerial(ReceiptPrinter printer)
-    {
-        var portName = Environment.GetEnvironmentVariable("ESCPOS_SERIAL_PORT");
-        if (string.IsNullOrWhiteSpace(portName))
-            return null;
-
-        int baud = int.TryParse(Environment.GetEnvironmentVariable("ESCPOS_SERIAL_BAUD"), out var b) ? b : 9600;
-        return new SerialServer(printer, portName, baud);
+        return (true, port);
     }
 }

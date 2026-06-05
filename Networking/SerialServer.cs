@@ -10,36 +10,42 @@ namespace ReceiptPrinterEmulator.Networking;
 
 /// <summary>
 /// Receives ESC/POS data over a serial port (RS-232 / USB-serial / virtual PTY) and feeds it to the
-/// printer, mirroring <see cref="NetServer"/>. The interpreter keeps its state across calls, so the
-/// byte stream may arrive in arbitrary chunks (commands spanning reads are handled correctly).
+/// printer, mirroring <see cref="NetServer"/>. Can be opened/closed at runtime (e.g. from the UI).
+/// The interpreter keeps its state across calls, so the byte stream may arrive in arbitrary chunks
+/// (commands spanning reads are handled correctly).
 ///
 /// To simulate without hardware, create a virtual serial pair:
-///   macOS/Linux:  socat -d -d pty,raw,echo=0 pty,raw,echo=0   (point the app at one PTY, write to the other)
+///   macOS/Linux:  socat -d -d pty,raw,echo=0 pty,raw,echo=0
 ///   Windows:      com0com  (creates a linked COM pair, e.g. COM3 &lt;-&gt; COM4)
 /// </summary>
 public class SerialServer
 {
-    public string PortName { get; }
-    public int BaudRate { get; }
+    public string PortName { get; private set; } = string.Empty;
+    public int BaudRate { get; private set; }
     public bool IsRunning { get; private set; }
 
     private readonly ReceiptPrinter _printer;
     private SerialPort? _port;
     private CancellationTokenSource? _cts;
 
-    public SerialServer(ReceiptPrinter printer, string portName, int baudRate = 9600)
+    public SerialServer(ReceiptPrinter printer)
     {
         _printer = printer;
-        PortName = portName;
-        BaudRate = baudRate;
     }
 
-    public async Task Run()
+    /// <summary>
+    /// Opens the given serial port. Returns true on success; on failure the server is left closed and
+    /// the error is logged. Re-opening closes any previous port first.
+    /// </summary>
+    public bool Start(string portName, int baudRate = 9600)
     {
         Stop();
 
         try
         {
+            PortName = portName;
+            BaudRate = baudRate;
+
             Logger.Info($"Opening serial port {PortName} @ {BaudRate} baud");
 
             _port = new SerialPort(PortName, BaudRate)
@@ -51,12 +57,15 @@ public class SerialServer
             IsRunning = true;
 
             _cts = new CancellationTokenSource();
-            await ReceiveLoopAsync(_cts.Token);
+            _ = ReceiveLoopAsync(_cts.Token);
+
+            return true;
         }
         catch (Exception ex)
         {
-            IsRunning = false;
-            Logger.Exception(ex, $"Serial port error on {PortName}");
+            Logger.Exception(ex, $"Failed to open serial port {portName}");
+            Stop();
+            return false;
         }
     }
 
@@ -81,15 +90,27 @@ public class SerialServer
         var stream = _port!.BaseStream;
         var buffer = new byte[64 * 1024];
 
-        while (IsRunning && !cancellationToken.IsCancellationRequested)
+        try
         {
-            int read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
-            if (read <= 0)
-                continue;
+            while (IsRunning && !cancellationToken.IsCancellationRequested)
+            {
+                int read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
+                if (read <= 0)
+                    continue;
 
-            Logger.Info($"Received serial data (byteCount={read}, port={PortName})");
+                Logger.Info($"Received serial data (byteCount={read}, port={PortName})");
 
-            _printer.FeedEscPos(Encoding.Latin1.GetString(buffer, 0, read));
+                _printer.FeedEscPos(Encoding.Latin1.GetString(buffer, 0, read));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected on Stop().
+        }
+        catch (Exception ex)
+        {
+            Logger.Exception(ex, $"Serial read error on {PortName}");
+            IsRunning = false;
         }
     }
 }

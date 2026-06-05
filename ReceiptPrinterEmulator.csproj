@@ -16,6 +16,9 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
         <!-- Pinned to match Avalonia.Skia 12.0.4's SkiaSharp dependency (avoids native lib conflicts) -->
         <PackageReference Include="SkiaSharp" Version="3.119.4" />
+        <!-- The base SkiaSharp package ships Windows/macOS natives; Linux must be added explicitly
+             so our direct SkiaSharp calls (barcode/QR/PNG encode) work out-of-the-box on Linux. -->
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
         <!-- Barcode/QR generation (managed matrix APIs only, drawn to Skia ourselves) -->
         <PackageReference Include="QRCoder" Version="1.8.0" />
         <PackageReference Include="ZXing.Net" Version="0.16.11" />

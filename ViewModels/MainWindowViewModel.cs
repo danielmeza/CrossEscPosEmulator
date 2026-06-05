@@ -19,7 +19,7 @@ public partial class MainWindowViewModel : ObservableObject
     private const string TestReceiptPath = "test_receipt.txt";
 
     private readonly ReceiptPrinter _printer;
-    private readonly NetServer _server;
+    private readonly NetServer? _server;
     private readonly SerialServer? _serial;
     private readonly INotificationService _notifications;
 
@@ -39,20 +39,22 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>Raised (on the UI thread) after receipts change, so the view can scroll to bottom.</summary>
     public event EventHandler? ReceiptsUpdated;
 
-    public MainWindowViewModel(ReceiptPrinter printer, NetServer server,
-        INotificationService notifications, SerialServer? serial = null)
+    public MainWindowViewModel(ReceiptPrinter printer, INotificationService notifications,
+        NetServer? server = null, SerialServer? serial = null)
     {
         _printer = printer;
         _server = server;
         _serial = serial;
         _notifications = notifications;
 
-        // OnActivityEvent fires from the TCP receive thread — marshal everything to the UI thread.
+        // These events fire from a transport receive thread — marshal everything to the UI thread.
         _printer.OnActivityEvent += (_, _) => Dispatcher.UIThread.Post(() =>
         {
             RefreshReceipts();
             _notifications.NotifyActivity();
         });
+        _printer.OnBuzzer += () => Dispatcher.UIThread.Post(() => _notifications.Beep());
+        _printer.OnCashDrawer += () => Dispatcher.UIThread.Post(() => _notifications.OpenCashDrawer());
 
         RefreshReceipts();
     }
@@ -78,7 +80,10 @@ public partial class MainWindowViewModel : ObservableObject
         if (!File.Exists(TestReceiptPath))
             return;
 
-        _printer.FeedEscPos(File.ReadAllText(TestReceiptPath, Encoding.ASCII));
+        // Read as raw bytes (the file contains binary ESC/POS incl. barcode/QR), decoded the same
+        // way as the network/serial path so byte values >127 survive.
+        var bytes = File.ReadAllBytes(TestReceiptPath);
+        _printer.FeedEscPos(Encoding.Latin1.GetString(bytes));
     }
 
     [RelayCommand]
@@ -103,8 +108,16 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void RefreshReceipts()
     {
-        StatusText = $"TCP {_server.EndPoint}";
-        StatusBrush = _server.IsRunning ? Brushes.SpringGreen : Brushes.Crimson;
+        if (_server is not null)
+        {
+            StatusText = $"TCP {_server.EndPoint}";
+            StatusBrush = _server.IsRunning ? Brushes.SpringGreen : Brushes.Crimson;
+        }
+        else
+        {
+            StatusText = "TCP off";
+            StatusBrush = Brushes.Gray;
+        }
 
         if (_serial is not null)
             SerialStatusText = $"Serial {_serial.PortName} @ {_serial.BaudRate} " +

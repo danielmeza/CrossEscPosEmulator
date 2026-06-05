@@ -59,6 +59,7 @@ public class EscPosInterpreter
         RegisterCommand(new PaperPartialCut()); // 0x1B, 0x69
         RegisterCommand(new PaperPrintFeednLines()); // 0x1B, 0x64
         RegisterCommand(new PaperPrintFeed()); // 0x1B, 0x4A
+        RegisterCommand(new GeneratePulseCommand()); // 0x1B, 0x70 (cash drawer kick)
         
         // FS = 0x1C
         RegisterCommand(new PrintStoredLogo()); // 0x1C, 0x70, n, m
@@ -200,6 +201,13 @@ public class EscPosInterpreter
 
             #region Normal mode
 
+            if (currentChar == BEL)
+            {
+                // Bell — sound the buzzer/beeper
+                _printer.Buzz();
+                continue;
+            }
+
             if (currentChar == HT)
             {
                 // Horizontal tab
@@ -257,6 +265,7 @@ public class EscPosInterpreter
     }
 
     public static readonly char NUL = Convert.ToChar(0);
+    public static readonly char BEL = Convert.ToChar(7);  // 0x07
     public static readonly char HT = Convert.ToChar(9);
     public static readonly char LF = Convert.ToChar(10);  // 0x0A
     public static readonly char FF = Convert.ToChar(12);  // 0x0C

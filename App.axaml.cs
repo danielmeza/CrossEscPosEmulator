@@ -26,8 +26,10 @@ public partial class App : Application
         {
             var printer = new ReceiptPrinter(PaperConfiguration.Default);
 
-            _server = new NetServer(printer, 9100);
-            _ = _server.Run();
+            // TCP transport — port via ESCPOS_TCP_PORT (default 9100). Set it to "off"/"0" to disable.
+            _server = TryCreateTcp(printer);
+            if (_server is not null)
+                _ = _server.Run();
 
             // Optional serial transport — enabled by setting ESCPOS_SERIAL_PORT
             // (e.g. /dev/ttys005 from a socat PTY pair, or COM3). Baud via ESCPOS_SERIAL_BAUD.
@@ -36,7 +38,7 @@ public partial class App : Application
                 _ = _serial.Run();
 
             var notifications = new NotificationService();
-            var viewModel = new MainWindowViewModel(printer, _server, notifications, _serial);
+            var viewModel = new MainWindowViewModel(printer, notifications, _server, _serial);
 
             var window = new MainWindow { DataContext = viewModel };
             notifications.AttachWindow(window);
@@ -44,12 +46,22 @@ public partial class App : Application
 
             desktop.ShutdownRequested += (_, _) =>
             {
-                _server.Stop();
+                _server?.Stop();
                 _serial?.Stop();
             };
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static NetServer? TryCreateTcp(ReceiptPrinter printer)
+    {
+        var setting = Environment.GetEnvironmentVariable("ESCPOS_TCP_PORT");
+        if (setting is "off" or "none" or "disabled" or "0")
+            return null;
+
+        int port = int.TryParse(setting, out var p) && p > 0 ? p : 9100;
+        return new NetServer(printer, port);
     }
 
     private static SerialServer? TryCreateSerial(ReceiptPrinter printer)

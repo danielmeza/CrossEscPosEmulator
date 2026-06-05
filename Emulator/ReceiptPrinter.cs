@@ -36,6 +36,8 @@ public class ReceiptPrinter
     public List<Receipt> ReceiptStack { get; private set; }
 
     public event EventHandler<EventArgs>? OnActivityEvent;
+    public event Action? OnBuzzer;
+    public event Action? OnCashDrawer;
 
     public ReceiptPrinter(PaperConfiguration paperConfiguration)
     {
@@ -226,6 +228,18 @@ public class ReceiptPrinter
         Logger.Info($"Print bitmap: {bitmap.Width}x{bitmap.Height}");
 
         CurrentReceipt.PrintBitmap(bitmap);
+    }
+
+    public void Buzz()
+    {
+        Logger.Info("Buzzer");
+        OnBuzzer?.Invoke();
+    }
+
+    public void KickCashDrawer(int pin)
+    {
+        Logger.Info($"Cash drawer kick (pin {pin})");
+        OnCashDrawer?.Invoke();
     }
 
     #endregion

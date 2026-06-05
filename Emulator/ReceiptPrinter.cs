@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Text;
+using SkiaSharp;
 using ReceiptPrinterEmulator.Emulator.Enums;
 using ReceiptPrinterEmulator.EscPos;
 using ReceiptPrinterEmulator.Logging;
@@ -198,10 +198,10 @@ public class ReceiptPrinter
     public void SetDefaultLineSpacing() => SetLineSpacing(_paperConfiguration.DefaultLineSpacing);
     public void SetDefaultTabSpacing() => SetTabSpacing(_paperConfiguration.DefaultTabSpacing);
 
-    public void PrintBitmap(Bitmap bitmap)
+    public void PrintBitmap(SKBitmap bitmap)
     {
         Logger.Info($"Print bitmap: {bitmap.Width}x{bitmap.Height}");
-        
+
         CurrentReceipt.PrintBitmap(bitmap);
     }
 

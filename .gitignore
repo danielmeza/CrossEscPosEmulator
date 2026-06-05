@@ -5,3 +5,8 @@ riderModule.iml
 /_ReSharper.Caches/
 /.vs
 /.idea/
+
+# Runtime debug dumps written by ReceiptPrinter.FeedEscPos
+last_escpos_receive.txt
+last_ticket.bin
+last_*.txt

@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using ReceiptPrinterEmulator.Emulator;
 using ReceiptPrinterEmulator.Logging;
 
 namespace ReceiptPrinterEmulator.Networking;
@@ -10,18 +11,20 @@ namespace ReceiptPrinterEmulator.Networking;
 public class NetServer
 {
     public IPEndPoint EndPoint { get; private set; }
-    
+
+    private readonly ReceiptPrinter _printer;
     private Socket? _tcpSocket;
     private CancellationTokenSource? _cts;
-    
+
     private List<NetClient> _clients;
 
     public bool IsRunning => _tcpSocket is not null && _tcpSocket.IsBound;
 
-    public NetServer(int port)
+    public NetServer(ReceiptPrinter printer, int port)
     {
+        _printer = printer;
         EndPoint = new IPEndPoint(IPAddress.Any, port);
-        
+
         _clients = new();
     }
     
@@ -59,7 +62,7 @@ public class NetServer
             if (!clientSocket.Connected)
                 continue;
 
-            var client = new NetClient(this, clientSocket);
+            var client = new NetClient(this, _printer, clientSocket);
             _clients.Add(client);
             
             Logger.Info($"Accepted new connection (RemoteEndPoint={client.RemoteEndPoint})");

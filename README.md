@@ -4,7 +4,7 @@
 
 
 ### About
-- Windows application (WPF + .NET 9)
+- Cross-platform application (Avalonia 12 + SkiaSharp + .NET 10), runs on Windows, macOS and Linux
 - Binds to a TCP/IP interface and listens for ESC/POS commands
 - Logs commands and visually represents the resulting receipt(s)
 - It support different text formattings in the same line, although a few combinations were tested.

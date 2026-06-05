@@ -16,16 +16,17 @@ public class PaperConfiguration
     public int DefaultLineSpacing = 10;
     public int DefaultTabSpacing = 8;
 
+    // Render font is a preferred monospace family name. FontProvider resolves it cross-platform,
+    // falling back through Consolas / Menlo / DejaVu Sans Mono / Courier New / monospace, or an
+    // embedded TTF when present. (Original WPF app used the Windows-only "MS Gothic".)
+    private const string RenderFontFamily = "Consolas";
+
     public Dictionary<PrinterFont, FontConfiguration> _printerFonts = new()
     {
-        //{PrinterFont.FontA, new FontConfiguration(PrinterFont.FontA, 12, 24, "Consolas")},
-        //{PrinterFont.FontB, new FontConfiguration(PrinterFont.FontB, 9, 24, "Consolas")},
-        //{PrinterFont.FontC, new FontConfiguration(PrinterFont.FontC, 24, 48, "Consolas")},
-        //{PrinterFont.FontD, new FontConfiguration(PrinterFont.FontD, 16, 24, "Consolas")}
-        {PrinterFont.FontA, new FontConfiguration(PrinterFont.FontA, 12, 24, "MS Gothic")},
-        {PrinterFont.FontB, new FontConfiguration(PrinterFont.FontB, 9, 24,  "MS Gothic")},
-        {PrinterFont.FontC, new FontConfiguration(PrinterFont.FontC, 24, 48, "MS Gothic")},
-        {PrinterFont.FontD, new FontConfiguration(PrinterFont.FontD, 16, 24, "MS Gothic")}
+        {PrinterFont.FontA, new FontConfiguration(PrinterFont.FontA, 12, 24, RenderFontFamily)},
+        {PrinterFont.FontB, new FontConfiguration(PrinterFont.FontB, 9, 24,  RenderFontFamily)},
+        {PrinterFont.FontC, new FontConfiguration(PrinterFont.FontC, 24, 48, RenderFontFamily)},
+        {PrinterFont.FontD, new FontConfiguration(PrinterFont.FontD, 16, 24, RenderFontFamily)}
     };
 
     public FontConfiguration GetFont(PrinterFont printerFont)

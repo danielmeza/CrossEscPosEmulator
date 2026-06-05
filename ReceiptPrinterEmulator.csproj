@@ -1,20 +1,48 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net9.0-windows7.0</TargetFramework>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
-        <UseWPF>true</UseWPF>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <ApplicationIcon>Assets/Icon/icon.ico</ApplicationIcon>
+        <AssemblyName>ReceiptPrinterEmulator</AssemblyName>
+        <Version>1.0.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+        <PackageReference Include="Avalonia" Version="12.0.4" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+        <!-- Pinned to match Avalonia.Skia 12.0.4's SkiaSharp dependency (avoids native lib conflicts) -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4" />
+        <!-- The base SkiaSharp package ships Windows/macOS natives; Linux must be added explicitly
+             so our direct SkiaSharp calls (barcode/QR/PNG encode) work out-of-the-box on Linux. -->
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
+        <!-- Barcode/QR generation (managed matrix APIs only, drawn to Skia ourselves) -->
+        <PackageReference Include="QRCoder" Version="1.8.0" />
+        <PackageReference Include="ZXing.Net" Version="0.16.11" />
+        <!-- Serial-port transport (RS-232 / virtual PTY simulation) -->
+        <PackageReference Include="System.IO.Ports" Version="10.0.8" />
     </ItemGroup>
 
     <ItemGroup>
       <None Update="test_receipt.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <!-- Embedded monospace font (JetBrains Mono, OFL) for deterministic cross-platform rendering -->
+      <None Update="Assets/Fonts/*.ttf">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- App icon embedded as an Avalonia resource so the window can load it at runtime -->
+      <AvaloniaResource Include="Assets/Icon/icon.png" />
+      <AvaloniaResource Include="Assets/Icon/icon-256.png" />
     </ItemGroup>
 
 </Project>

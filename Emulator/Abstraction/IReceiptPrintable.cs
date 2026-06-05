@@ -1,9 +1,13 @@
-﻿using System.Drawing;
+using SkiaSharp;
 
 namespace ReceiptPrinterEmulator.Emulator.Abstraction;
 
 public interface IReceiptPrintable
 {
-    public void Render(Bitmap bitmap, Graphics g, int offsetX, int offsetY);
+    /// <summary>
+    /// Draws this line onto the receipt canvas at the given top-left offset.
+    /// </summary>
+    public void Render(SKCanvas canvas, int offsetX, int offsetY);
+
     public int GetPrintHeight();
 }

@@ -1,11 +1,11 @@
-﻿using ReceiptPrinterEmulator.Emulator.Abstraction;
+using ReceiptPrinterEmulator.Emulator.Abstraction;
 using ReceiptPrinterEmulator.Logging;
 using System;
-using System.Drawing;
+using SkiaSharp;
 
 namespace ReceiptPrinterEmulator.Emulator.Printables;
 
-public class ReceiptBitmapLine(PaperConfiguration paperConfiguration, Bitmap image) : IReceiptPrintable
+public class ReceiptBitmapLine(PaperConfiguration paperConfiguration, SKBitmap image) : IReceiptPrintable
 {
     public int GetPrintHeight()
     {
@@ -16,7 +16,7 @@ public class ReceiptBitmapLine(PaperConfiguration paperConfiguration, Bitmap ima
         return (int)Math.Ceiling(image.Height * (float)printWidth / image.Width);
     }
 
-    public void Render(Bitmap bitmap, Graphics g, int offsetX, int offsetY)
+    public void Render(SKCanvas canvas, int offsetX, int offsetY)
     {
         Logger.Info($"Rendering bitmap line at offset ({offsetX}, {offsetY}) with size ({image.Width}, {image.Height})");
 
@@ -25,11 +25,14 @@ public class ReceiptBitmapLine(PaperConfiguration paperConfiguration, Bitmap ima
         {
             // Center the image horizontally if it fits within the print width
             offsetX += (printWidth - image.Width) / 2;
-            g.DrawImageUnscaled(image, offsetX, offsetY, image.Width, image.Height);
+            canvas.DrawBitmap(image, offsetX, offsetY);
         }
         else
         {
-            g.DrawImage(image, offsetX, offsetY, printWidth, image.Height * (float)printWidth / image.Width);
+            var scaledHeight = image.Height * (float)printWidth / image.Width;
+            var dest = SKRect.Create(offsetX, offsetY, printWidth, scaledHeight);
+            using var sampling = new SKPaint { IsAntialias = true };
+            canvas.DrawBitmap(image, dest, sampling);
         }
     }
 }

@@ -1,0 +1,112 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:ReceiptPrinterEmulator.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="800"
+        x:Class="ReceiptPrinterEmulator.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/Icon/icon-256.png"
+        Title="ESC/POS Receipt Printer Emulator"
+        Width="900" Height="800" MinWidth="880"
+        Background="#262626">
+
+    <DockPanel>
+        <Border DockPanel.Dock="Left" Background="#3b3b3b" Width="250">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="12">
+                    <StackPanel.Styles>
+                        <Style Selector="Button">
+                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                            <Setter Property="Margin" Value="0 4 0 0"/>
+                        </Style>
+                        <Style Selector="TextBlock.section">
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Margin" Value="0 14 0 4"/>
+                        </Style>
+                        <Style Selector="TextBlock.label">
+                            <Setter Property="Foreground" Value="#AAAAAA"/>
+                            <Setter Property="FontSize" Value="11"/>
+                            <Setter Property="Margin" Value="0 6 0 2"/>
+                        </Style>
+                        <Style Selector="ComboBox">
+                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                        </Style>
+                        <Style Selector="TextBox">
+                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                        </Style>
+                    </StackPanel.Styles>
+
+                    <!-- TCP -->
+                    <TextBlock Classes="section" Text="TCP/IP" Margin="0 0 0 4"/>
+                    <TextBlock Classes="label" Text="Listen address"/>
+                    <ComboBox ItemsSource="{Binding AvailableAddresses}"
+                              SelectedItem="{Binding SelectedAddress}"/>
+                    <TextBlock Classes="label" Text="Port"/>
+                    <TextBox Text="{Binding TcpPortText}"/>
+                    <Button Command="{Binding ToggleTcpCommand}" Content="{Binding TcpButtonText}"/>
+                    <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBrush}"
+                               TextWrapping="Wrap" FontSize="11" Margin="0 4 0 0"/>
+
+                    <!-- Serial -->
+                    <TextBlock Classes="section" Text="Serial"/>
+                    <TextBlock Classes="label" Text="Port"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <ComboBox Grid.Column="0"
+                                  ItemsSource="{Binding AvailablePorts}"
+                                  SelectedItem="{Binding SelectedSerialPort}"/>
+                        <Button Grid.Column="1" Command="{Binding RefreshSerialPortsCommand}"
+                                Content="⟳" Margin="4 0 0 0" ToolTip.Tip="Refresh ports"/>
+                    </Grid>
+                    <TextBlock Classes="label" Text="Baud rate"/>
+                    <TextBox Text="{Binding BaudText}"/>
+                    <Button Command="{Binding ToggleSerialCommand}" Content="{Binding SerialButtonText}"/>
+                    <TextBlock Text="{Binding SerialStatusText}" Foreground="#CCCCCC"
+                               TextWrapping="Wrap" FontSize="11" Margin="0 4 0 0"/>
+
+                    <!-- Actions -->
+                    <TextBlock Classes="section" Text="Actions"/>
+                    <Button Command="{Binding ResetCommand}" Content="Reset"/>
+                    <Button Command="{Binding TestPrintCommand}" Content="Test print"/>
+                    <Button Command="{Binding HexDumpCommand}" Content="Hex Dump Test Ticket"/>
+
+                    <!-- Export -->
+                    <TextBlock Classes="section" Text="Export"/>
+                    <Button Command="{Binding ExportAllCommand}" Content="Export all (single image)…"/>
+                    <Button Command="{Binding ExportEachCommand}" Content="Export each cut (folder)…"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <ScrollViewer Name="MainScrollView"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Visible">
+            <ItemsControl ItemsSource="{Binding Receipts}" Margin="0 12 0 0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ReceiptViewModel">
+                        <Border Background="White" CornerRadius="4"
+                                Margin="0 0 0 16" HorizontalAlignment="Center"
+                                BoxShadow="0 2 10 0 #50000000">
+                            <StackPanel>
+                                <Image Source="{Binding Image}" Stretch="None"/>
+                                <!-- Page toolbar (below the receipt, after the cut) -->
+                                <Border Background="#3b3b3b" CornerRadius="0 0 4 4">
+                                    <Grid ColumnDefinitions="*,Auto" Margin="10 4">
+                                        <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                                   Foreground="White" FontSize="12"
+                                                   VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Command="{Binding ExportCommand}"
+                                                Content="↓ PNG" Padding="8 2" FontSize="12"
+                                                ToolTip.Tip="Export this page as PNG"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

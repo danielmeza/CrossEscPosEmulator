@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ReceiptPrinterEmulator.Emulator;
 using ReceiptPrinterEmulator.Logging;
 
 namespace ReceiptPrinterEmulator.Networking;
@@ -12,17 +13,19 @@ public class NetClient
 {
     public readonly NetServer Server;
     public readonly EndPoint RemoteEndPoint;
-    
+
+    private readonly ReceiptPrinter _printer;
     private Socket _socket;
     private CancellationTokenSource _lifetimeCts;
 
     public bool IsConnected => _socket.Connected;
     
-    public NetClient(NetServer server, Socket clientSocket)
+    public NetClient(NetServer server, ReceiptPrinter printer, Socket clientSocket)
     {
         Server = server;
+        _printer = printer;
         RemoteEndPoint = clientSocket.RemoteEndPoint!;
-        
+
         _socket = clientSocket;
         _lifetimeCts = new();
     }
@@ -67,6 +70,6 @@ public class NetClient
         }
     }
 
-    private static void HandleIncomingData(ReadOnlySpan<byte> data) =>
-        App.Printer?.FeedEscPos(Encoding.Latin1.GetString(data));
+    private void HandleIncomingData(ReadOnlySpan<byte> data) =>
+        _printer.FeedEscPos(Encoding.Latin1.GetString(data));
 }

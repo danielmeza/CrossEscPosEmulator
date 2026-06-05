@@ -1,9 +1,5 @@
 ﻿using ReceiptPrinterEmulator.Emulator;
-using ReceiptPrinterEmulator.Logging;
-using System;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Windows.Input;
+using SkiaSharp;
 
 namespace ReceiptPrinterEmulator.EscPos.Commands.GS;
 
@@ -69,21 +65,19 @@ public class PrintRasterBitImageCommand : BaseCommand
 
     public override void Execute(ReceiptPrinter printer, string? args)
     {
-        var bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+        var bmp = new SKBitmap(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque));
         var values = ReadBytesByBits(length);
 
-        BitmapData bitmapData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, bmp.PixelFormat);
-        IntPtr ptr = bitmapData.Scan0;
-        byte value = 0;
-        for (int i = 0; i < values.Length; i++)
+        // Each bit is one pixel: 0 -> white, 1 -> black (row-major).
+        var pixels = new SKColor[width * height];
+        int count = System.Math.Min(values.Length, pixels.Length);
+        for (int i = 0; i < count; i++)
         {
-            value = values[i] == 0 ? (byte)255 : (byte)0;
-            System.Runtime.InteropServices.Marshal.WriteByte(ptr, i * 3 + 0, value);
-            System.Runtime.InteropServices.Marshal.WriteByte(ptr, i * 3 + 1, value);
-            System.Runtime.InteropServices.Marshal.WriteByte(ptr, i * 3 + 2, value);
+            byte value = values[i] == 0 ? (byte)255 : (byte)0;
+            pixels[i] = new SKColor(value, value, value);
         }
 
-        bmp.UnlockBits(bitmapData);
+        bmp.Pixels = pixels;
 
         printer.PrintBitmap(bmp);
     }

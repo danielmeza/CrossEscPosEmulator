@@ -1,36 +1,33 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Drawing;
 using ReceiptPrinterEmulator.Emulator.Abstraction;
 using ReceiptPrinterEmulator.Emulator.Enums;
+using ReceiptPrinterEmulator.Emulator.Rendering;
+using SkiaSharp;
 
 namespace ReceiptPrinterEmulator.Emulator.Printables;
 
 public class ReceiptTextLine : IReceiptPrintable
 {
+    // GDI+ Font sizes were specified in points and rendered onto a 96-DPI bitmap, so the original
+    // app effectively used an em size of (points * 96/72) pixels. We keep that ratio so receipt
+    // text keeps the same proportions now that SkiaSharp font sizes are specified in pixels.
+    private const float PointsToPixels = 96f / 72f;
+
     private readonly PaperConfiguration.FontConfiguration _font;
     private readonly int _printWidth;
-    private readonly int _charHeight;
-    private readonly TextJustification _justification;
-    private readonly bool _bold;
-    private readonly bool _italic;
-    private readonly UnderlineMode _underline;
 
     private int _totalWidth;
     private readonly List<(string text, PrintMode mode)> _strings = new();
 
-    public bool IsEmpty => _strings.Count==0;
-    
+    public bool IsEmpty => _strings.Count == 0;
+
     public ReceiptTextLine(PaperConfiguration paperConfiguration, PrintMode printMode)
     {
+        // Style (font/bold/italic/underline/justification) is read per-run from each char's PrintMode
+        // in Render, so only the font config and print width need to be captured here.
         _font = paperConfiguration.GetFont(printMode.Font);
         _printWidth = paperConfiguration.GetPrintWidthInPixels();
-        _charHeight = _font.CharacterHeight * printMode.CharHeightScale;
-        _justification = printMode.Justification;
-        _bold = printMode.Emphasize;
-        _italic = printMode.Italic;
-        _underline = printMode.Underline;
-
         _totalWidth = 0;
     }
 
@@ -69,139 +66,102 @@ public class ReceiptTextLine : IReceiptPrintable
         return maxCharHeight + (_font.CharacterHeight / 4);
     }
 
-    public void Render(Bitmap bitmap, Graphics g, int offsetX, int offsetY)
+    private SKFont CreateFont(PrintMode mode)
     {
-        // 1. Measure total line width for justification
-        float totalWidth = 0;
-        var runWidths = new List<float>();
-        foreach (var (text, mode) in _strings)
-        {
-            int baseCharHeight = _font.CharacterHeight / 2;
-            var fontStyle = FontStyle.Regular;
-            if (mode.Emphasize) fontStyle |= FontStyle.Bold;
-            if (mode.Italic) fontStyle |= FontStyle.Italic;
-            using var font = new Font(_font.RenderFont, baseCharHeight, fontStyle);
-            SizeF baseSize = g.MeasureString(text, font, int.MaxValue, StringFormat.GenericTypographic);
-            float scaledWidth = baseSize.Width * mode.CharWidthScale;
-            runWidths.Add(scaledWidth);
-            totalWidth += scaledWidth;
-        }
-
-        // 2. Use the justification of the first run (ESC/POS line property)
-        TextJustification justification = _strings.Count > 0 ? _strings[0].mode.Justification : TextJustification.Left;
-        int x = offsetX;
-        if (justification == TextJustification.Center)
-            x += (int)((_printWidth - totalWidth) / 2);
-        else if (justification == TextJustification.Right)
-            x += (int)(_printWidth - totalWidth);
-       
-
-        // Find the tallest run in this line for baseline alignment
-        int maxCharHeight = 0;
-        float maxAscent = 0;
-        foreach (var (_, mode) in _strings)
-        {
-            int baseCharHeight = _font.CharacterHeight / 2;
-            int charHeight = baseCharHeight * mode.CharHeightScale;
-            using var font = new Font(_font.RenderFont, baseCharHeight, FontStyle.Regular);
-            var ascent = font.FontFamily.GetCellAscent(font.Style) * font.Size / font.FontFamily.GetEmHeight(font.Style) * mode.CharHeightScale;
-            if (charHeight > maxCharHeight)
-                maxCharHeight = charHeight;
-            if (ascent > maxAscent)
-                maxAscent = ascent;
-        }
-
-        foreach (var (text, mode) in _strings)
-        {
-            int baseCharWidth = _font.CharacterWidth / 2;
-            int baseCharHeight = _font.CharacterHeight / 2;
-            int charHeight = baseCharHeight * mode.CharHeightScale;
-
-            var fontStyle = FontStyle.Regular;
-            if (mode.Emphasize) fontStyle |= FontStyle.Bold;
-            if (mode.Italic) fontStyle |= FontStyle.Italic;
-
-            using var font = new Font(_font.RenderFont, baseCharHeight, fontStyle);
-
-            // Font metrics for baseline alignment
-            float ascent = font.FontFamily.GetCellAscent(font.Style) * font.Size / font.FontFamily.GetEmHeight(font.Style) * mode.CharHeightScale;
-            float baselineOffset = (float)(maxAscent - ascent + (maxCharHeight - charHeight));
-
-            // Measure the string width in base font, then scale
-            SizeF baseSize = g.MeasureString(text, font, int.MaxValue, StringFormat.GenericTypographic);
-            float scaledWidth = baseSize.Width * mode.CharWidthScale;
-
-            var state = g.Save();
-
-            // Align baseline of run to line baseline
-            g.TranslateTransform(x, offsetY + baselineOffset);
-            g.ScaleTransform(mode.CharWidthScale, mode.CharHeightScale);
-
-            g.DrawString(text, font, Brushes.Black, 0, 0, StringFormat.GenericTypographic);
-
-            // Underline (draw in scaled context)
-            if (mode.Underline is UnderlineMode.OnOneDot or UnderlineMode.OnTwoDots)
-            {
-                var dotHeight = (mode.Underline is UnderlineMode.OnTwoDots ? 2 : 1);
-                g.DrawLine(new Pen(Color.Black, dotHeight), 0, baseCharHeight*2, baseSize.Width, baseCharHeight*2);
-            }
-
-            g.Restore(state);
-
-            x += (int)Math.Ceiling(scaledWidth);
-        }
+        float sizePx = (_font.CharacterHeight / 2f) * PointsToPixels;
+        var typeface = FontProvider.Get(_font.RenderFont, mode.Emphasize, mode.Italic);
+        return new SKFont(typeface, sizePx);
     }
 
+    public void Render(SKCanvas canvas, int offsetX, int offsetY)
+    {
+        if (_strings.Count == 0)
+            return;
 
-    /* public void Render(Bitmap bitmap, Graphics g, int offsetX, int offsetY)
-     {
-         int x = offsetX;
-         foreach (var (c, mode) in _strings)
-         {
-             int charWidth = (_font.CharacterWidth * mode.CharWidthScale)* c.Length;
-             int charHeight = _font.CharacterHeight * mode.CharHeightScale;
-             var fontStyle = FontStyle.Regular;
-             if (mode.Emphasize) fontStyle |= FontStyle.Bold;
-             if (mode.Italic) fontStyle |= FontStyle.Italic;
-             using var font = new Font(_font.RenderFont, charWidth / 1.5f, fontStyle);
+        using var fillPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
 
-             var rect = new Rectangle(x, offsetY, charWidth, charHeight);
-             Console.WriteLine($"Drawing char '{c}' at ({x}, {offsetY}) with size ({charWidth}, {charHeight})");
-             //var state = g.Save();
-             // Justification logic here if needed
-             // g.ScaleTransform(mode.CharWidthScale, mode.CharHeightScale);
-             g.DrawString(c, font, Brushes.Black, rect);
-             //g.Restore(state);
+        // 1. Measure each run (unscaled) and the total justified width.
+        var runFonts = new List<SKFont>(_strings.Count);
+        var runWidths = new List<float>(_strings.Count);
+        float totalWidth = 0;
+        try
+        {
+            foreach (var (text, mode) in _strings)
+            {
+                var font = CreateFont(mode);
+                runFonts.Add(font);
+                float measured = font.MeasureText(text);
+                float scaledWidth = measured * mode.CharWidthScale;
+                runWidths.Add(scaledWidth);
+                totalWidth += scaledWidth;
+            }
 
-             if (mode.Underline is UnderlineMode.OnOneDot or UnderlineMode.OnTwoDots)
-             {
-                 var dotHeight = (mode.Underline is UnderlineMode.OnTwoDots ? 2 : 1);
-                 g.DrawLine(new Pen(Color.Black, dotHeight), rect.Left, rect.Bottom, rect.Right, rect.Bottom);
-             }
+            // 2. Justification (taken from the first run, an ESC/POS line property).
+            TextJustification justification = _strings[0].mode.Justification;
+            int x = offsetX;
+            if (justification == TextJustification.Center)
+                x += (int)((_printWidth - totalWidth) / 2);
+            else if (justification == TextJustification.Right)
+                x += (int)(_printWidth - totalWidth);
 
-             x += charWidth;
-         }
+            // 3. Find the tallest run for baseline alignment (device pixels).
+            float maxAscent = 0;
+            float maxCharHeight = 0;
+            for (int i = 0; i < _strings.Count; i++)
+            {
+                var mode = _strings[i].mode;
+                var metrics = runFonts[i].Metrics;
+                float ascent = -metrics.Ascent * mode.CharHeightScale;
+                float charHeight = runFonts[i].Size * mode.CharHeightScale;
+                if (ascent > maxAscent) maxAscent = ascent;
+                if (charHeight > maxCharHeight) maxCharHeight = charHeight;
+            }
 
-     } */
+            // 4. Draw each run, baseline-aligned, applying width/height scale via the canvas.
+            for (int i = 0; i < _strings.Count; i++)
+            {
+                var (text, mode) = _strings[i];
+                var font = runFonts[i];
+                var metrics = font.Metrics;
 
+                float ascent = -metrics.Ascent;                          // unscaled, device px
+                float scaledAscent = ascent * mode.CharHeightScale;
+                float scaledCharHeight = font.Size * mode.CharHeightScale;
+                float baselineOffset = (maxAscent - scaledAscent) + (maxCharHeight - scaledCharHeight);
+
+                int count = canvas.Save();
+                // Translate (device px) then scale, mirroring the original GDI+ transform order.
+                canvas.Translate(x, offsetY + baselineOffset);
+                canvas.Scale(mode.CharWidthScale, mode.CharHeightScale);
+
+                // Skia positions text on the baseline; draw at y = ascent so the glyph top sits at 0.
+                canvas.DrawText(text, 0, ascent, font, fillPaint);
+
+                // Underline drawn in the scaled context, just below the glyph box.
+                if (mode.Underline is UnderlineMode.OnOneDot or UnderlineMode.OnTwoDots)
+                {
+                    float dotHeight = mode.Underline is UnderlineMode.OnTwoDots ? 2 : 1;
+                    float underlineY = ascent + metrics.Descent;
+                    float runWidthUnscaled = font.MeasureText(text);
+                    using var underlinePaint = new SKPaint
+                    {
+                        Color = SKColors.Black,
+                        IsAntialias = true,
+                        Style = SKPaintStyle.Stroke,
+                        StrokeWidth = dotHeight
+                    };
+                    canvas.DrawLine(0, underlineY, runWidthUnscaled, underlineY, underlinePaint);
+                }
+
+                canvas.RestoreToCount(count);
+
+                x += (int)Math.Ceiling(runWidths[i]);
+            }
+        }
+        finally
+        {
+            foreach (var font in runFonts)
+                font.Dispose();
+        }
+    }
 }
-
-
-/* var state = g.Save();
-
-               // Move to the correct position, aligning bottom of char to baseline
-               g.TranslateTransform(x, offsetY + (maxCharHeight - charHeight));
-
-               // Scale for double width/height
-               g.ScaleTransform(mode.CharWidthScale, mode.CharHeightScale);
-
-               g.DrawString(c.ToString(), font, Brushes.Black, 0, 0);
-
-               // Underline (draw in scaled context)
-               if (mode.Underline is UnderlineMode.OnOneDot or UnderlineMode.OnTwoDots)
-               {
-                   var dotHeight = (mode.Underline is UnderlineMode.OnTwoDots ? 2 : 1);
-g.DrawLine(new Pen(Color.Black, dotHeight), 0, baseCharHeight, baseCharWidth, baseCharHeight);
-               }
-
-               g.Restore(state); */

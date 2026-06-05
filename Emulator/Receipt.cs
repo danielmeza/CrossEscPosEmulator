@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using ReceiptPrinterEmulator.Emulator.Abstraction;
 using ReceiptPrinterEmulator.Emulator.Printables;
+using SkiaSharp;
 
 namespace ReceiptPrinterEmulator.Emulator;
 
@@ -96,7 +96,7 @@ public class Receipt
 
     public void AdvanceToNewLine() => FinalizeTextLine(true);
 
-    public void PrintBitmap(Bitmap image)
+    public void PrintBitmap(SKBitmap image)
     {
         FinalizeTextLine(false);
 
@@ -109,27 +109,28 @@ public class Receipt
     public int GetTotalPaperHeight() =>
         GetTotalPrintHeight() + (PaperMargins * 2);
 
-    public Bitmap Render(bool drawPartials = true)
+    public SKBitmap Render(bool drawPartials = true)
     {
         var paperWidth = PaperWidth;
-        var paperHeight = GetTotalPaperHeight();
-        
-        var bmp = new Bitmap(paperWidth, paperHeight);
-        using var g = Graphics.FromImage(bmp);
-        
+        var paperHeight = Math.Max(1, GetTotalPaperHeight());
+
+        var bmp = new SKBitmap(paperWidth, paperHeight);
+        using var canvas = new SKCanvas(bmp);
+
         // Fill white background
-        g.FillRectangle(Brushes.White, 0, 0, paperWidth, paperHeight);
-        
+        canvas.Clear(SKColors.White);
+
         // Draw all rendered lines
         var offsetX = PaperMargins;
         var offsetY = PaperMargins;
 
         foreach (var line in _renderLines)
         {
-            line.Render(bmp, g, offsetX, offsetY);
+            line.Render(canvas, offsetX, offsetY);
             offsetY += line.GetPrintHeight();
         }
 
+        canvas.Flush();
         return bmp;
     }
 }

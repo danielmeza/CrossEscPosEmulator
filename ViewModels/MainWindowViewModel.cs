@@ -23,7 +23,10 @@ namespace ReceiptPrinterEmulator.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private const string TestReceiptPath = "test_receipt.txt";
+    // Resolve relative to the app directory, not the process working directory: a Finder/Explorer-
+    // launched app has its CWD set to "/" (or elsewhere), so a bare relative path is not found.
+    private static readonly string TestReceiptPath =
+        Path.Combine(AppContext.BaseDirectory, "test_receipt.txt");
 
     private readonly ReceiptPrinter _printer;
     private readonly NetServer _tcp;

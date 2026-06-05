@@ -20,6 +20,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private readonly ReceiptPrinter _printer;
     private readonly NetServer _server;
+    private readonly SerialServer? _serial;
     private readonly INotificationService _notifications;
 
     private readonly Dictionary<string, ReceiptViewModel> _receiptsById = new();
@@ -30,15 +31,20 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private IBrush _statusBrush = Brushes.Crimson;
 
+    [ObservableProperty]
+    private string _serialStatusText = string.Empty;
+
     public ObservableCollection<ReceiptViewModel> Receipts { get; } = new();
 
     /// <summary>Raised (on the UI thread) after receipts change, so the view can scroll to bottom.</summary>
     public event EventHandler? ReceiptsUpdated;
 
-    public MainWindowViewModel(ReceiptPrinter printer, NetServer server, INotificationService notifications)
+    public MainWindowViewModel(ReceiptPrinter printer, NetServer server,
+        INotificationService notifications, SerialServer? serial = null)
     {
         _printer = printer;
         _server = server;
+        _serial = serial;
         _notifications = notifications;
 
         // OnActivityEvent fires from the TCP receive thread — marshal everything to the UI thread.
@@ -97,8 +103,12 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void RefreshReceipts()
     {
-        StatusText = _server.EndPoint.ToString();
+        StatusText = $"TCP {_server.EndPoint}";
         StatusBrush = _server.IsRunning ? Brushes.SpringGreen : Brushes.Crimson;
+
+        if (_serial is not null)
+            SerialStatusText = $"Serial {_serial.PortName} @ {_serial.BaudRate} " +
+                               (_serial.IsRunning ? "(open)" : "(closed)");
 
         foreach (var receipt in _printer.ReceiptStack)
         {

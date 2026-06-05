@@ -15,7 +15,11 @@
             <StackPanel Margin="15 10" VerticalAlignment="Center">
                 <TextBlock Text="{Binding StatusText}"
                            Foreground="{Binding StatusBrush}"
-                           FontWeight="Bold" Margin="0 0 0 10"/>
+                           FontWeight="Bold" Margin="0 0 0 4"/>
+                <TextBlock Text="{Binding SerialStatusText}"
+                           Foreground="#CCCCCC"
+                           IsVisible="{Binding SerialStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           Margin="0 0 0 10"/>
                 <Button Command="{Binding ResetCommand}" Padding="5 3" Margin="0 0 0 10"
                         HorizontalAlignment="Stretch" Content="Reset"/>
                 <Button Command="{Binding TestPrintCommand}" Padding="5 3" Margin="0 0 0 10"

@@ -41,10 +41,51 @@
   - Select cut mode and cut paper
   - Paper eject (`GS e n [m t]`)
   - Print raster image (`GS v 0 [m xL xH yL yH ...pixels]`)
+  - Print 1D barcode (`GS k`) — UPC-A/E, EAN-13/8, CODE39, CODE93, CODE128, ITF, CODABAR (both function A & B forms)
+  - Set barcode height / module width (`GS h` / `GS w`)
+  - Select HRI text position / font (`GS H` / `GS f`)
+  - Print 2D QR Code (`GS ( k`, cn=49) — model, module size, error-correction level, store & print
 
 ### Example
 
 ![Emulator](docs/Example.png)
+
+### Connecting
+
+The emulator accepts ESC/POS data over two transports:
+
+- **TCP/IP** — always listening on port **9100** (send to `localhost:9100`).
+- **Serial** — optional. Set `ESCPOS_SERIAL_PORT` (and optionally `ESCPOS_SERIAL_BAUD`, default 9600)
+  before launching to open a serial port. The status panel shows the active port.
+
+To simulate a serial printer **without hardware**, create a virtual serial pair:
+
+```sh
+# macOS / Linux — prints two PTY device paths (e.g. /dev/ttys004 <-> /dev/ttys005)
+socat -d -d pty,raw,echo=0 pty,raw,echo=0
+
+# Point the app at one end…
+ESCPOS_SERIAL_PORT=/dev/ttys004 dotnet run
+# …and send a receipt to the other end:
+cat test_receipt.txt > /dev/ttys005
+```
+
+On Windows use [com0com](https://com0com.sourceforge.net/) to create a linked COM pair (e.g. `COM3` ↔ `COM4`).
+
+### Building & running
+
+```sh
+dotnet run
+```
+
+Requires the .NET 10 SDK. The app runs on Windows, macOS and Linux.
+
+- **Windows / macOS:** no extra setup — native rendering libraries ship with the Avalonia packages.
+- **Linux:** install the usual font/render native deps if they are missing, e.g.
+  `sudo apt install libfontconfig1 libfreetype6` (Debian/Ubuntu).
+
+Receipt text is rendered with the bundled **JetBrains Mono** font (under `Assets/Fonts/`, OFL),
+so output is identical across platforms.
 
 ### Emulated printer
 

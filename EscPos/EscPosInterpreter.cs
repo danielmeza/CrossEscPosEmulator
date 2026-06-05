@@ -69,6 +69,14 @@ public class EscPosInterpreter
         RegisterCommand(new SelectCutModeAndCutCommand());
         RegisterCommand(new PaperEjectCommand()); // 0x1D, 0x65, n, [m, t]
         RegisterCommand(new PrintRasterBitImageCommand());
+
+        // GS - barcodes (1D) and QR (2D)
+        RegisterCommand(new SetBarcodeHeightCommand());   // 0x1D, 0x68, n
+        RegisterCommand(new SetBarcodeWidthCommand());    // 0x1D, 0x77, n
+        RegisterCommand(new SelectHriPositionCommand());  // 0x1D, 0x48, n
+        RegisterCommand(new SelectHriFontCommand());      // 0x1D, 0x66, n
+        RegisterCommand(new PrintBarcodeCommand());       // 0x1D, 0x6B, m ...
+        RegisterCommand(new PrintQrCommand());            // 0x1D, 0x28, 0x6B, ...
     }
 
     private void RegisterCommand(BaseCommand command)

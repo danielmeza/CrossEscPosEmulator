@@ -16,11 +16,6 @@ public class ReceiptTextLine : IReceiptPrintable
 
     private readonly PaperConfiguration.FontConfiguration _font;
     private readonly int _printWidth;
-    private readonly int _charHeight;
-    private readonly TextJustification _justification;
-    private readonly bool _bold;
-    private readonly bool _italic;
-    private readonly UnderlineMode _underline;
 
     private int _totalWidth;
     private readonly List<(string text, PrintMode mode)> _strings = new();
@@ -29,14 +24,10 @@ public class ReceiptTextLine : IReceiptPrintable
 
     public ReceiptTextLine(PaperConfiguration paperConfiguration, PrintMode printMode)
     {
+        // Style (font/bold/italic/underline/justification) is read per-run from each char's PrintMode
+        // in Render, so only the font config and print width need to be captured here.
         _font = paperConfiguration.GetFont(printMode.Font);
         _printWidth = paperConfiguration.GetPrintWidthInPixels();
-        _charHeight = _font.CharacterHeight * printMode.CharHeightScale;
-        _justification = printMode.Justification;
-        _bold = printMode.Emphasize;
-        _italic = printMode.Italic;
-        _underline = printMode.Underline;
-
         _totalWidth = 0;
     }
 

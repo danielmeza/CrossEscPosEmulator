@@ -73,6 +73,13 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool HasReceipts => Receipts.Count > 0;
 
+    // Transient on-screen toast for buzzer / cash-drawer events (always-visible feedback).
+    [ObservableProperty]
+    private string _toastMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _toastVisible;
+
     /// <summary>Raised (on the UI thread) after receipts change, so the view can scroll to bottom.</summary>
     public event EventHandler? ReceiptsUpdated;
 
@@ -92,8 +99,16 @@ public partial class MainWindowViewModel : ObservableObject
             RefreshReceipts();
             _notifications.NotifyActivity();
         });
-        _printer.OnBuzzer += () => Dispatcher.UIThread.Post(() => _notifications.Beep());
-        _printer.OnCashDrawer += () => Dispatcher.UIThread.Post(() => _notifications.OpenCashDrawer());
+        _printer.OnBuzzer += () => Dispatcher.UIThread.Post(() =>
+        {
+            _notifications.Beep();
+            ShowToast("🔔  Buzzer");
+        });
+        _printer.OnCashDrawer += () => Dispatcher.UIThread.Post(() =>
+        {
+            _notifications.OpenCashDrawer();
+            ShowToast("💵  Cash drawer opened");
+        });
 
         PopulateAddresses(listenAddress);
         RefreshSerialPorts();
@@ -336,6 +351,14 @@ public partial class MainWindowViewModel : ObservableObject
     {
         _tcp.Stop();
         _serial.Stop();
+    }
+
+    private void ShowToast(string message)
+    {
+        ToastMessage = message;
+        ToastVisible = true;
+        // Auto-hide after a moment (must run on the UI thread; callers already are).
+        DispatcherTimer.RunOnce(() => ToastVisible = false, TimeSpan.FromMilliseconds(1800));
     }
 
     private void UpdateStatus()

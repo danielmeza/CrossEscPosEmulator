@@ -1,16 +1,18 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using ReceiptPrinterEmulator.Logging;
 
 namespace ReceiptPrinterEmulator.Services;
 
 /// <summary>
-/// Default notification service. On Windows it flashes the taskbar button to draw attention
-/// (mirroring the original WPF <c>user32!FlashWindow</c> behavior); on macOS/Linux it is a no-op,
-/// since there is no cross-platform taskbar-flash API in Avalonia. Buzzer/cash-drawer events are
-/// surfaced via a taskbar flash plus the terminal bell, since an emulator has no real hardware.
+/// Default notification service. Plays a best-effort sound for buzzer / cash-drawer events
+/// (afplay on macOS, Console.Beep on Windows, paplay/aplay/terminal-bell on Linux) and flashes the
+/// taskbar on Windows. The primary, always-visible feedback is the on-screen toast shown by the view
+/// model — sound here is supplementary since the machine may be muted.
 /// </summary>
 public class NotificationService : INotificationService
 {
@@ -23,16 +25,84 @@ public class NotificationService : INotificationService
     public void Beep()
     {
         Logger.Info("Buzzer");
-        Console.Out.Write('\a'); // terminal bell — best-effort across platforms
-        Console.Out.Flush();
+        PlaySound(isDrawer: false);
         Flash();
     }
 
     public void OpenCashDrawer()
     {
         Logger.Info("Cash drawer kick");
+        PlaySound(isDrawer: true);
         Flash();
     }
+
+    private static void PlaySound(bool isDrawer)
+    {
+        try
+        {
+            if (OperatingSystem.IsMacOS())
+            {
+                // Built-in macOS system sounds.
+                var sound = isDrawer ? "/System/Library/Sounds/Funk.aiff"
+                                     : "/System/Library/Sounds/Glass.aiff";
+                if (!TryStart("/usr/bin/afplay", sound))
+                    TryStart("/usr/bin/osascript", "-e", "beep");
+            }
+            else if (OperatingSystem.IsWindows())
+            {
+                // Console.Beep is synchronous — run it off the UI thread.
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        BeepWindows(isDrawer ? 600 : 1000, 180);
+                        if (isDrawer) BeepWindows(900, 180);
+                    }
+                    catch { /* ignore */ }
+                });
+            }
+            else // Linux / other Unix
+            {
+                if (!TryStart("canberra-gtk-play", "-i", isDrawer ? "message" : "bell") &&
+                    !TryStart("paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga") &&
+                    !TryStart("aplay", "-q", "/usr/share/sounds/alsa/Front_Center.wav"))
+                {
+                    Console.Out.Write('\a');
+                    Console.Out.Flush();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Exception(ex, "Failed to play notification sound");
+        }
+    }
+
+    private static bool TryStart(string fileName, params string[] args)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = fileName,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            foreach (var a in args)
+                psi.ArgumentList.Add(a);
+
+            return Process.Start(psi) is not null;
+        }
+        catch
+        {
+            return false; // tool not installed — caller falls back
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void BeepWindows(int frequency, int durationMs) => Console.Beep(frequency, durationMs);
 
     private void Flash()
     {

@@ -6,6 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="800"
         x:Class="ReceiptPrinterEmulator.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/Icon/icon-256.png"
         Title="ESC/POS Receipt Printer Emulator"
         Width="900" Height="800" MinWidth="880"
         Background="#262626">
@@ -82,13 +83,27 @@
         <ScrollViewer Name="MainScrollView"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Visible">
-            <ItemsControl ItemsSource="{Binding Receipts}" Margin="0 10 0 0">
+            <ItemsControl ItemsSource="{Binding Receipts}" Margin="0 12 0 0">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:ReceiptViewModel">
-                        <Image Source="{Binding Image}"
-                               Stretch="None"
-                               HorizontalAlignment="Center"
-                               Margin="0 0 0 10"/>
+                        <Border Background="White" CornerRadius="4"
+                                Margin="0 0 0 16" HorizontalAlignment="Center"
+                                BoxShadow="0 2 10 0 #50000000">
+                            <StackPanel>
+                                <!-- Page toolbar -->
+                                <Border Background="#3b3b3b" CornerRadius="4 4 0 0">
+                                    <Grid ColumnDefinitions="*,Auto" Margin="10 4">
+                                        <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                                   Foreground="White" FontSize="12"
+                                                   VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Command="{Binding ExportCommand}"
+                                                Content="↓ PNG" Padding="8 2" FontSize="12"
+                                                ToolTip.Tip="Export this page as PNG"/>
+                                    </Grid>
+                                </Border>
+                                <Image Source="{Binding Image}" Stretch="None"/>
+                            </StackPanel>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

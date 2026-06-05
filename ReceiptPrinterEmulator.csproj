@@ -6,6 +6,9 @@
         <Nullable>enable</Nullable>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <ApplicationIcon>Assets/Icon/icon.ico</ApplicationIcon>
+        <AssemblyName>ReceiptPrinterEmulator</AssemblyName>
+        <Version>1.0.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
@@ -34,6 +37,12 @@
       <None Update="Assets/Fonts/*.ttf">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- App icon embedded as an Avalonia resource so the window can load it at runtime -->
+      <AvaloniaResource Include="Assets/Icon/icon.png" />
+      <AvaloniaResource Include="Assets/Icon/icon-256.png" />
     </ItemGroup>
 
 </Project>

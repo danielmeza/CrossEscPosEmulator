@@ -371,7 +371,7 @@ public partial class MainWindowViewModel : ObservableObject
             }
             else
             {
-                vm = new ReceiptViewModel(receipt);
+                vm = new ReceiptViewModel(receipt, _dialogs, Receipts.Count + 1);
                 _receiptsById[receipt.Guid] = vm;
                 Receipts.Add(vm);
             }

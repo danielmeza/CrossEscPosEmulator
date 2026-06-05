@@ -1,7 +1,7 @@
 ﻿# ESC/POS Receipt Printer Emulator
 🖨️ **This app emulates a networked receipt printer to test your ESC/POS commands against.**
 
-
+![Emulator](docs/Example.png)
 
 ### About
 - Cross-platform application (Avalonia 12 + SkiaSharp + .NET 10), runs on Windows, macOS and Linux
@@ -19,6 +19,30 @@
 > emulator goes to the upstream author.
 
 👷 **This is an unfinished experiment.** Use at your own risk and keep your expectations low. :)
+
+### Download
+
+Pre-built, **self-contained** apps (no .NET install required) are published on the
+[Releases](../../releases) page:
+
+| Platform | Artifact |
+|----------|----------|
+| Windows (x64) | `ReceiptPrinterEmulator-win-x64.zip` |
+| Linux (x64) | `ReceiptPrinterEmulator-linux-x64.tar.gz` |
+| macOS (Intel) | `ReceiptPrinterEmulator-osx-x64.zip` (`.app` bundle) |
+| macOS (Apple Silicon) | `ReceiptPrinterEmulator-osx-arm64.zip` (`.app` bundle) |
+
+Releases are produced by the [`Release`](.github/workflows/release.yml) GitHub Actions workflow on
+each `v*` tag. macOS builds are not notarized — on first launch, right-click the `.app` → **Open**.
+
+### Built with
+
+- [.NET 10](https://dotnet.microsoft.com/) · [Avalonia 12](https://avaloniaui.net/) ·
+  [SkiaSharp](https://github.com/mono/SkiaSharp) (rendering) ·
+  [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) (MVVM)
+- [ZXing.Net](https://github.com/micjahn/ZXing.Net) (1D barcodes) ·
+  [QRCoder](https://github.com/codebude/QRCoder) (QR codes) ·
+  [System.IO.Ports](https://www.nuget.org/packages/System.IO.Ports) (serial)
 
 ### Supported commands
 
@@ -76,10 +100,6 @@ prefixes the interpreter doesn't recognise, may raise an error):
 Contributions welcome — new commands follow the simple `BaseCommand` pattern in
 [`EscPos/Commands`](EscPos/Commands) and are registered in
 [`EscPosInterpreter.RegisterCommands`](EscPos/EscPosInterpreter.cs).
-
-### Example
-
-![Emulator](docs/Example.png)
 
 ### Connecting
 

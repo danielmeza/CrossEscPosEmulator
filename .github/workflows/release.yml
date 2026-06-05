@@ -1,0 +1,93 @@
+name: Release
+
+# Builds self-contained apps for Windows, Linux and macOS and publishes them to a GitHub Release.
+# Trigger by pushing a tag like `v1.2.3`, or run manually (workflow_dispatch) to just build artifacts.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: win-x64,   os: ubuntu-latest, kind: zip }
+          - { rid: linux-x64, os: ubuntu-latest, kind: targz }
+          - { rid: osx-x64,   os: macos-latest,  kind: app }
+          - { rid: osx-arm64, os: macos-latest,  kind: app }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Determine version
+        id: ver
+        shell: bash
+        run: |
+          VER=1.0.0
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then VER="${GITHUB_REF_NAME#v}"; fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Publish (self-contained)
+        run: >
+          dotnet publish ReceiptPrinterEmulator.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=false
+          -p:Version=${{ steps.ver.outputs.version }}
+          -o publish/${{ matrix.rid }}
+
+      - name: Package — zip (Windows)
+        if: matrix.kind == 'zip'
+        run: |
+          cd publish/${{ matrix.rid }}
+          zip -r ../../ReceiptPrinterEmulator-${{ matrix.rid }}.zip .
+
+      - name: Package — tar.gz (Linux)
+        if: matrix.kind == 'targz'
+        run: tar -czf ReceiptPrinterEmulator-${{ matrix.rid }}.tar.gz -C publish/${{ matrix.rid }} .
+
+      - name: Package — .app bundle (macOS)
+        if: matrix.kind == 'app'
+        run: |
+          chmod +x scripts/make-macos-app.sh
+          scripts/make-macos-app.sh publish/${{ matrix.rid }} dist "${{ steps.ver.outputs.version }}"
+          ditto -c -k --keepParent dist/ReceiptPrinterEmulator.app ReceiptPrinterEmulator-${{ matrix.rid }}.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.rid }}
+          path: |
+            ReceiptPrinterEmulator-${{ matrix.rid }}.zip
+            ReceiptPrinterEmulator-${{ matrix.rid }}.tar.gz
+          if-no-files-found: ignore
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+          fail_on_unmatched_files: false

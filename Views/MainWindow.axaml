@@ -11,6 +11,7 @@
         Width="900" Height="800" MinWidth="880"
         Background="#262626">
 
+    <Grid>
     <DockPanel>
         <Border DockPanel.Dock="Left" Background="#3b3b3b" Width="250">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -109,4 +110,15 @@
             </ItemsControl>
         </ScrollViewer>
     </DockPanel>
+
+        <!-- Transient toast for buzzer / cash-drawer events -->
+        <Border IsVisible="{Binding ToastVisible}"
+                HorizontalAlignment="Center" VerticalAlignment="Top"
+                Margin="0 24 0 0" Padding="20 12"
+                Background="#E6202020" CornerRadius="8"
+                BoxShadow="0 4 16 0 #80000000" IsHitTestVisible="False">
+            <TextBlock Text="{Binding ToastMessage}" Foreground="White"
+                       FontSize="16" FontWeight="SemiBold"/>
+        </Border>
+    </Grid>
 </Window>

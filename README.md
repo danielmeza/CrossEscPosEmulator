@@ -33,7 +33,19 @@ Pre-built, **self-contained** apps (no .NET install required) are published on t
 | macOS (Apple Silicon) | `ReceiptPrinterEmulator-osx-arm64.zip` (`.app` bundle) |
 
 Releases are produced by the [`Release`](.github/workflows/release.yml) GitHub Actions workflow on
-each `v*` tag. macOS builds are not notarized — on first launch, right-click the `.app` → **Open**.
+each `v*` tag.
+
+> **macOS first launch.** The `.app` is **ad-hoc signed but not notarized** (no paid Apple Developer
+> ID). macOS quarantines anything downloaded from the internet, so on first launch you may see
+> *"ReceiptPrinterEmulator is damaged and can't be opened"* (especially on Apple Silicon). Clear the
+> quarantine flag once, then open it:
+>
+> ```sh
+> xattr -dr com.apple.quarantine /path/to/ReceiptPrinterEmulator.app
+> open /path/to/ReceiptPrinterEmulator.app
+> ```
+>
+> (Right-click → **Open** also works once the quarantine is cleared.)
 
 ### Built with
 

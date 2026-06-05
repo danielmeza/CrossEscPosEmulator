@@ -67,4 +67,17 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# Ad-hoc code-sign the whole bundle (deep) so it runs on Apple Silicon. Without any signature,
+# Gatekeeper reports a downloaded app as "damaged" on arm64. This is NOT Developer-ID/notarized —
+# users still need to clear the download quarantine on first launch (see README). Signing must be
+# the LAST step, after all files (Info.plist, icns, payload) are in place.
+if command -v codesign >/dev/null 2>&1; then
+  echo "Ad-hoc code-signing $APP …"
+  codesign --remove-signature "$APP" 2>/dev/null || true
+  codesign --force --deep --sign - --timestamp=none "$APP"
+  codesign --verify --deep --strict --verbose=2 "$APP" || echo "warning: codesign verify failed" >&2
+else
+  echo "warning: codesign not available — bundle left unsigned (will be 'damaged' on Apple Silicon)" >&2
+fi
+
 echo "Built $APP"

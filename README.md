@@ -82,6 +82,10 @@ each `v*` tag. macOS builds are not notarized — on first launch, right-click t
   - Select HRI text position / font (`GS H` / `GS f`)
   - Print 2D QR Code (`GS ( k`, cn=49) — model, module size, error-correction level, store & print
 
+Barcodes and QR codes render inline on the receipt, with optional HRI text:
+
+![Barcode and QR example](docs/Example%20QR.png)
+
 ### Not yet implemented
 
 Common commands that are **not** handled yet (parsing one of these will currently be ignored or, for

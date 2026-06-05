@@ -90,8 +90,9 @@
                                 Margin="0 0 0 16" HorizontalAlignment="Center"
                                 BoxShadow="0 2 10 0 #50000000">
                             <StackPanel>
-                                <!-- Page toolbar -->
-                                <Border Background="#3b3b3b" CornerRadius="4 4 0 0">
+                                <Image Source="{Binding Image}" Stretch="None"/>
+                                <!-- Page toolbar (below the receipt, after the cut) -->
+                                <Border Background="#3b3b3b" CornerRadius="0 0 4 4">
                                     <Grid ColumnDefinitions="*,Auto" Margin="10 4">
                                         <TextBlock Grid.Column="0" Text="{Binding Title}"
                                                    Foreground="White" FontSize="12"
@@ -101,7 +102,6 @@
                                                 ToolTip.Tip="Export this page as PNG"/>
                                     </Grid>
                                 </Border>
-                                <Image Source="{Binding Image}" Stretch="None"/>
                             </StackPanel>
                         </Border>
                     </DataTemplate>

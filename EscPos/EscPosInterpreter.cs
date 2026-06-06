@@ -89,7 +89,10 @@ public class EscPosInterpreter
 
         // Buzzer / configuration
         RegisterCommand(new BeeperCommand());             // ESC ( A — manufacturer beeper
+        RegisterCommand(new SelectBitImageModeCommand()); // ESC * m nL nH ...
         RegisterCommand(new SetMotionUnitsCommand());     // GS P x y
+        RegisterCommand(new DefineDownloadBitImageCommand()); // GS * x y ...
+        RegisterCommand(new PrintDownloadBitImageCommand());  // GS / m
         RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(E", "GS ( E user setup"));
         RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(K", "GS ( K print control"));
         RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(H", "GS ( H response request"));

@@ -64,30 +64,31 @@ public static class StatusByteBuilder
 
     /// <summary>
     /// The 4-byte Automatic Status Back block (sent on GS a / on every state change while enabled).
-    /// Each byte carries a 2-bit identifier in bits 0-1 (00,01,10,11) per the TM ASB format.
+    /// Byte layout matches the Epson TM ASB format as parsed by ESC-POS-.NET: byte 0 has fixed bit 4
+    /// (and bits 0,1,7 clear); the cash-drawer bit is inverted (open = bit 2 clear); paper-low/out
+    /// use paired bits.
     /// </summary>
     public static byte[] AutoStatusBack(PrinterState s)
     {
-        // Byte 1 (id 00): paper feed / online / drawer / cover
+        // Byte 0 — printer info (bit4 fixed 1; bits 0,1,7 fixed 0).
+        byte b0 = 0x10;
+        if (!s.DrawerOpen) b0 |= 0x04;                // bit2 SET = drawer closed (open => clear)
+        if (!s.Online) b0 |= 0x08;                    // bit3 SET = offline
+        if (s.CoverOpen) b0 |= 0x20;                  // bit5 = cover open
+        if (s.FeedButtonPressed) b0 |= 0x40;          // bit6 = paper currently feeding
+
+        // Byte 1 — error info.
         byte b1 = 0;
-        if (s.DrawerOpen) b1 |= 0x04;                 // bit2: drawer
-        if (!s.Online) b1 |= 0x08;                    // bit3: offline
-        if (s.CoverOpen) b1 |= 0x20;                  // bit5: cover open
-        if (s.FeedButtonPressed) b1 |= 0x40;          // bit6: paper being fed
+        if (s.FeedButtonPressed) b1 |= 0x02;          // bit1 = feed button pushed
+        if (s.Error == PrinterErrorState.Unrecoverable) b1 |= 0x20; // bit5
+        if (s.Error == PrinterErrorState.Recoverable) b1 |= 0x40;   // bit6
 
-        // Byte 2 (id 01): error causes
-        byte b2 = 0x01;
-        if (s.Error == PrinterErrorState.Recoverable) b2 |= 0x40;
-        if (s.Error == PrinterErrorState.Unrecoverable) b2 |= 0x20;
+        // Byte 2 — roll paper sensors (paired bits).
+        byte b2 = 0;
+        if (s.Paper >= PaperLevel.NearEnd) b2 |= 0x03; // bits0,1 = paper low
+        if (s.Paper == PaperLevel.Out) b2 |= 0x0C;     // bits2,3 = paper out
 
-        // Byte 3 (id 10): roll paper sensors
-        byte b3 = 0x02;
-        if (s.Paper >= PaperLevel.NearEnd) b3 |= 0x0C;
-        if (s.Paper == PaperLevel.Out) b3 |= 0x60;
-
-        // Byte 4 (id 11): reserved
-        byte b4 = 0x03;
-
-        return new[] { b1, b2, b3, b4 };
+        byte b3 = 0;
+        return new[] { b0, b1, b2, b3 };
     }
 }

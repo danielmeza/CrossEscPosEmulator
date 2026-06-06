@@ -197,6 +197,18 @@ fragmented serial writes (commands split across packets) are handled correctly.
 (e.g. `COM3` ↔ `COM4`). Run the emulator with `ESCPOS_SERIAL_PORT=COM3` and have your application
 write to `COM4`.
 
+### Monitor (built-in test client)
+
+Click **Open monitor…** to launch a second window — a POS-side client (built on
+[ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) that connects back to the emulator over TCP
+and lets you exercise it without writing any code:
+
+- Print a sample receipt, all 1D barcodes, or QR / PDF417 / DataMatrix / Aztec.
+- Send the full feature test receipt, open the cash drawer, buzz, or cut.
+- Watch the **printer status** the emulator reports back: toggle paper-out / cover / drawer / offline
+  in the **Printer state** panel and the monitor's status display updates live (via Automatic Status
+  Back), confirming the emulator's status responses are wire-correct.
+
 ### Exporting tickets
 
 Each cut (`ESC i` / `ESC m` / `GS V`) starts a new receipt — a "page". The **Export** buttons in the

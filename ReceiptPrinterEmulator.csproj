@@ -29,6 +29,8 @@
         <PackageReference Include="System.IO.Ports" Version="10.0.8" />
         <!-- Legacy code pages (PC437/850/852/858/866/1252…) for ESC t character tables -->
         <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.0" />
+        <!-- ESC/POS client library, used by the built-in Monitor window to exercise the emulator -->
+        <PackageReference Include="ESCPOS_NET" Version="3.0.0" />
     </ItemGroup>
 
     <ItemGroup>

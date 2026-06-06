@@ -121,7 +121,8 @@ public partial class MonitorWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Append($"USB unavailable: {ex.Message} (install libusb — macOS: brew install libusb)");
+            if (IsLibusbMissing(ex)) AppendLibusbHelp();
+            else Append($"USB list failed: {ex.Message}");
         }
         SelectedUsbDevice = AvailableUsbDevices.FirstOrDefault(d => current is not null && d.Vid == current.Vid && d.Pid == current.Pid)
             ?? AvailableUsbDevices.FirstOrDefault();
@@ -132,6 +133,28 @@ public partial class MonitorWindowViewModel : ObservableObject
         Log.Insert(0, $"{message}");
         if (Log.Count > 200) Log.RemoveAt(Log.Count - 1);
     });
+
+    /// <summary>True when an exception was caused by libusb not being loadable.</summary>
+    private static bool IsLibusbMissing(Exception ex)
+    {
+        for (var e = ex; e is not null; e = e.InnerException)
+            if (e is DllNotFoundException || e.Message.Contains("libusb", StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
+    }
+
+    /// <summary>Logs a clear "libusb not found" message with platform-specific install instructions.</summary>
+    private void AppendLibusbHelp()
+    {
+        string install = OperatingSystem.IsMacOS()
+            ? "brew install libusb"
+            : OperatingSystem.IsLinux()
+                ? "sudo apt install libusb-1.0-0   (Debian/Ubuntu) — or your distro's libusb-1.0 package"
+                : "libusb ships with the app on Windows; reinstall the app if it's missing";
+        Append("Could not find libusb (the native USB library) — USB printing is unavailable.\n" +
+               $"  Install it:  {install}\n" +
+               "  Then click the ⟳ button to refresh the USB device list.");
+    }
 
     private async Task Send(string label, params byte[][] parts)
     {
@@ -203,9 +226,10 @@ public partial class MonitorWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Append($"connect failed: {ex.Message}");
-            if (Transport == TransportKind.Usb)
-                Append("(USB needs native libusb — macOS: brew install libusb — and the OS must not already own the device)");
+            if (Transport == TransportKind.Usb && IsLibusbMissing(ex))
+                AppendLibusbHelp();
+            else
+                Append($"connect failed: {ex.Message}");
             Disconnect();
         }
     }

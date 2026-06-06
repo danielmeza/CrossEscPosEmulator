@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.IO.Ports;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -40,16 +42,24 @@ public partial class MonitorWindowViewModel : ObservableObject
     private const int DefaultModuleSize = 5; // dots per module for 2D symbols
 
     private readonly EPSON _e = new();
-    private NetworkPrinter? _printer;
+    private BasePrinter? _printer;
 
+    [ObservableProperty] private bool _useSerial;
     [ObservableProperty] private string _host = "127.0.0.1";
     [ObservableProperty] private string _port;
+    [ObservableProperty] private string? _serialPortName;
+    [ObservableProperty] private string _serialBaud = "9600";
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private string _connectButtonText = "Connect";
     [ObservableProperty] private string _statusText = "Not connected.";
 
+    /// <summary>True when the TCP transport is selected (for binding the TCP fields' visibility).</summary>
+    public bool IsTcp => !UseSerial;
+    partial void OnUseSerialChanged(bool value) => OnPropertyChanged(nameof(IsTcp));
+
     public ObservableCollection<string> Log { get; } = new();
     public ObservableCollection<StatusIndicator> Indicators { get; } = new();
+    public ObservableCollection<string> AvailablePorts { get; } = new();
 
     private static readonly IBrush Green = new SolidColorBrush(Avalonia.Media.Color.Parse("#3CE07A"));
     private static readonly IBrush Red = new SolidColorBrush(Avalonia.Media.Color.Parse("#E0533C"));
@@ -60,6 +70,26 @@ public partial class MonitorWindowViewModel : ObservableObject
     public MonitorWindowViewModel(int defaultPort)
     {
         _port = defaultPort.ToString();
+        RefreshPorts();
+    }
+
+    [RelayCommand]
+    private void RefreshPorts()
+    {
+        var current = SerialPortName;
+        AvailablePorts.Clear();
+        try
+        {
+            foreach (var name in SerialPort.GetPortNames().OrderBy(n => n))
+                AvailablePorts.Add(name);
+        }
+        catch (Exception ex)
+        {
+            Append($"could not list serial ports: {ex.Message}");
+        }
+        SerialPortName = current is not null && AvailablePorts.Contains(current)
+            ? current
+            : AvailablePorts.FirstOrDefault();
     }
 
     private void Append(string message) => Dispatcher.UIThread.Post(() =>
@@ -91,11 +121,24 @@ public partial class MonitorWindowViewModel : ObservableObject
 
         try
         {
-            _printer = new NetworkPrinter(new NetworkPrinterSettings
+            string target;
+            if (UseSerial)
             {
-                ConnectionString = $"{Host}:{Port}",
-                PrinterName = "Monitor"
-            });
+                if (string.IsNullOrWhiteSpace(SerialPortName)) { Append("No serial port selected."); return; }
+                int baud = int.TryParse(SerialBaud, out var b) && b > 0 ? b : 9600;
+                _printer = new SerialPrinter(portName: SerialPortName, baudRate: baud);
+                target = $"serial {SerialPortName} @ {baud}";
+            }
+            else
+            {
+                _printer = new NetworkPrinter(new NetworkPrinterSettings
+                {
+                    ConnectionString = $"{Host}:{Port}",
+                    PrinterName = "Monitor"
+                });
+                target = $"{Host}:{Port}";
+            }
+
             _printer.StatusChanged += OnStatusChanged;
             // The read/monitor loop starts automatically on connect. Ask the emulator to push status
             // automatically on every state change so we see panel toggles reflected here.
@@ -104,7 +147,7 @@ public partial class MonitorWindowViewModel : ObservableObject
             IsConnected = true;
             ConnectButtonText = "Disconnect";
             StatusText = "Monitoring… toggle the Printer state panel to see updates.";
-            Append($"Connected to {Host}:{Port}");
+            Append($"Connected ({target})");
         }
         catch (Exception ex)
         {

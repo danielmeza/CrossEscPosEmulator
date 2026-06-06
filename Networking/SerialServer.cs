@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ReceiptPrinterEmulator.Emulator;
+using ReceiptPrinterEmulator.Emulator.Abstraction;
 using ReceiptPrinterEmulator.Logging;
 
 namespace ReceiptPrinterEmulator.Networking;
@@ -18,7 +19,7 @@ namespace ReceiptPrinterEmulator.Networking;
 ///   macOS/Linux:  socat -d -d pty,raw,echo=0 pty,raw,echo=0
 ///   Windows:      com0com  (creates a linked COM pair, e.g. COM3 &lt;-&gt; COM4)
 /// </summary>
-public class SerialServer
+public class SerialServer : IPrinterResponder
 {
     public string PortName { get; private set; } = string.Empty;
     public int BaudRate { get; private set; }
@@ -55,6 +56,7 @@ public class SerialServer
             };
             _port.Open();
             IsRunning = true;
+            _printer.RegisterResponder(this);
 
             _cts = new CancellationTokenSource();
             _ = ReceiveLoopAsync(_cts.Token);
@@ -74,6 +76,8 @@ public class SerialServer
         _cts?.Cancel();
         _cts = null;
 
+        _printer.UnregisterResponder(this);
+
         if (_port is not null)
         {
             try { if (_port.IsOpen) _port.Close(); }
@@ -83,6 +87,21 @@ public class SerialServer
         }
 
         IsRunning = false;
+    }
+
+    /// <summary>Writes a printer response (status bytes, printer ID, …) back over the serial port.</summary>
+    public void Send(byte[] data)
+    {
+        try
+        {
+            var port = _port;
+            if (port is { IsOpen: true })
+                port.BaseStream.Write(data, 0, data.Length);
+        }
+        catch (Exception ex)
+        {
+            Logger.Exception(ex, $"Failed to send {data.Length} bytes over {PortName}");
+        }
     }
 
     private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
@@ -100,7 +119,7 @@ public class SerialServer
 
                 Logger.Info($"Received serial data (byteCount={read}, port={PortName})");
 
-                _printer.FeedEscPos(Encoding.Latin1.GetString(buffer, 0, read));
+                _printer.FeedEscPos(Encoding.Latin1.GetString(buffer, 0, read), this);
             }
         }
         catch (OperationCanceledException)

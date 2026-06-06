@@ -8,7 +8,7 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/Icon/icon-256.png"
         Title="ESC/POS Receipt Printer Emulator"
-        Width="900" Height="800" MinWidth="880"
+        Width="1120" Height="820" MinWidth="1040"
         Background="#262626">
 
     <Grid>
@@ -77,6 +77,59 @@
                     <TextBlock Classes="section" Text="Export"/>
                     <Button Command="{Binding ExportAllCommand}" Content="Export all (single image)…"/>
                     <Button Command="{Binding ExportEachCommand}" Content="Export each cut (folder)…"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Border DockPanel.Dock="Right" Background="#3b3b3b" Width="220">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="12">
+                    <StackPanel.Styles>
+                        <Style Selector="TextBlock.section">
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Margin" Value="0 14 0 6"/>
+                        </Style>
+                        <Style Selector="TextBlock.label">
+                            <Setter Property="Foreground" Value="#AAAAAA"/>
+                            <Setter Property="FontSize" Value="11"/>
+                            <Setter Property="Margin" Value="0 8 0 2"/>
+                        </Style>
+                        <Style Selector="ComboBox">
+                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                        </Style>
+                        <Style Selector="ToggleSwitch">
+                            <Setter Property="Margin" Value="0 2 0 0"/>
+                        </Style>
+                    </StackPanel.Styles>
+
+                    <TextBlock Classes="section" Text="Printer state" Margin="0 0 0 6"/>
+
+                    <ToggleSwitch IsChecked="{Binding State.Online, Mode=TwoWay}"
+                                  OnContent="Online" OffContent="Offline"/>
+
+                    <ToggleSwitch IsChecked="{Binding State.CoverOpen, Mode=TwoWay}"
+                                  OnContent="Cover open" OffContent="Cover closed"/>
+
+                    <TextBlock Classes="label" Text="Paper"/>
+                    <ComboBox ItemsSource="{Binding PaperLevels}"
+                              SelectedItem="{Binding State.Paper, Mode=TwoWay}"/>
+
+                    <TextBlock Classes="label" Text="Error"/>
+                    <ComboBox ItemsSource="{Binding ErrorStates}"
+                              SelectedItem="{Binding State.Error, Mode=TwoWay}"/>
+
+                    <TextBlock Classes="section" Text="Cash drawer"/>
+                    <ToggleSwitch IsChecked="{Binding State.DrawerOpen, Mode=TwoWay}"
+                                  OnContent="Open" OffContent="Closed"/>
+
+                    <ToggleSwitch IsChecked="{Binding State.FeedButtonPressed, Mode=TwoWay}"
+                                  OnContent="Feed button down" OffContent="Feed button up"
+                                  Margin="0 14 0 0"/>
+
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="These drive the status commands (DLE EOT, GS r) and Automatic Status Back (GS a) sent to the host."
+                               Margin="0 14 0 0"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>

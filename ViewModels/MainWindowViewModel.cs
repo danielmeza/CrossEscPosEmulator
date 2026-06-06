@@ -73,6 +73,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool HasReceipts => Receipts.Count > 0;
 
+    // --- Printer state simulation (right-side panel) ---
+    public PrinterState State => _printer.State;
+    public Array PaperLevels { get; } = Enum.GetValues(typeof(Emulator.Enums.PaperLevel));
+    public Array ErrorStates { get; } = Enum.GetValues(typeof(Emulator.Enums.PrinterErrorState));
+
     // Transient on-screen toast for buzzer / cash-drawer events (always-visible feedback).
     [ObservableProperty]
     private string _toastMessage = string.Empty;

@@ -7,7 +7,9 @@
 - Cross-platform application (Avalonia 12 + SkiaSharp + .NET 10), runs on Windows, macOS and Linux
 - Listens for ESC/POS commands over **TCP/IP** and (optionally) a **serial port**
 - Logs commands and visually represents the resulting receipt(s)
-- Renders 1D barcodes and 2D QR codes, and signals buzzer / cash-drawer events
+- Renders 1D barcodes and 2D codes (QR, PDF417, DataMatrix, Aztec), bit images, and page mode
+- Answers status queries (`DLE EOT`, `GS r`, Automatic Status Back) — simulate paper-out, cover, drawer, offline and error states from the **Printer state** panel
+- Signals buzzer / cash-drawer events with a sound and on-screen toast
 - Configure the TCP listen address/port and serial port live from the UI
 - Export rendered tickets to PNG — all in one image, or one file per cut
 - It support different text formattings in the same line, although a few combinations were tested.
@@ -79,8 +81,19 @@ each `v*` tag.
   - Print and feed n lines (`ESC d`)
   - Print and feed paper (`ESC J`)
   - Generate pulse / kick cash drawer (`ESC p m t1 t2`)
+  - Select character code table (`ESC t`) — PC437/850/852/858/860/863/865/866/1252 remapped to Unicode
+  - Beeper (`ESC ( A`)
+  - Bit image (`ESC *`) — 8-dot and 24-dot inline raster
+  - Page mode: select page / standard mode (`ESC L` / `ESC S`), print area (`ESC W`), direction (`ESC T`), absolute position (`ESC $`)
+  - User-defined characters (`ESC &` / `ESC %` / `ESC ?`) — parsed & stored
 - Control characters:
   - Buzzer / beeper (`BEL`, 0x07)
+  - Form feed (`FF`) — prints the page in page mode
+  - Cancel (`CAN`) — cancels page data
+- DLE (real-time) Commands:
+  - Real-time status (`DLE EOT n`, n=1-4)
+  - Real-time request / recover (`DLE ENQ`)
+  - Real-time cash-drawer pulse (`DLE DC4 1 m t`)
 - FS Commands:
   - Print stored logo (`FS p n m`)
   - Auto cut (`FS } 0x60 n`)
@@ -92,7 +105,16 @@ each `v*` tag.
   - Print 1D barcode (`GS k`) — UPC-A/E, EAN-13/8, CODE39, CODE93, CODE128, ITF, CODABAR (both function A & B forms)
   - Set barcode height / module width (`GS h` / `GS w`)
   - Select HRI text position / font (`GS H` / `GS f`)
-  - Print 2D QR Code (`GS ( k`, cn=49) — model, module size, error-correction level, store & print
+  - Print 2D symbols (`GS ( k`) — QR Code (cn=49), PDF417 (cn=48), DataMatrix (cn=54), Aztec (cn=55)
+  - **Status / transmit-back**: paper & drawer status (`GS r`), printer ID (`GS I`), Automatic Status Back (`GS a`)
+  - Download bit image: define (`GS *`) and print (`GS /`)
+  - Set motion units (`GS P`), absolute/relative vertical position (`GS $` / `GS \`)
+  - Config (accepted/ignored): user setup (`GS ( E`), print control (`GS ( K`), response request (`GS ( H`)
+
+The emulator is **bidirectional**: status commands (`DLE EOT`, `GS r`, `GS I`) and Automatic Status
+Back reply to the host over the same TCP/serial connection, driven by the **Printer state** panel
+(right side) where you can simulate paper-out/near-end, cover open, cash-drawer open/closed,
+offline, and error conditions.
 
 Barcodes and QR codes render inline on the receipt, with optional HRI text:
 
@@ -100,18 +122,14 @@ Barcodes and QR codes render inline on the receipt, with optional HRI text:
 
 ### Not yet implemented
 
-Common commands that are **not** handled yet (parsing one of these will currently be ignored or, for
-prefixes the interpreter doesn't recognise, may raise an error):
+A few things remain partial or unimplemented:
 
-- **Real-time commands** (`DLE` prefix): real-time status, real-time cash-drawer (`DLE DC4`), power-off — currently not supported (the interpreter throws on `DLE`).
-- **Page mode** (`ESC L`, `ESC S`, `ESC W`, `FF`, `CAN`) — only Standard mode is emulated.
-- **Status / transmit-back commands** (`GS r`, `GS I`, `DLE EOT`, `GS ( H`) — the emulator never sends data back to the host.
-- **Other 2D symbologies** via `GS ( k`: PDF417 (cn=48), MaxiCode (cn=50), Aztec, DataMatrix — only QR (cn=49) is implemented.
-- **Bit-image** modes other than raster: `ESC *`, `GS *` / `GS /` (download bit image).
-- **User-defined characters** (`ESC &`, `ESC %`, `ESC ?`).
-- **Print-density / mechanism** controls (`GS ( E`, `GS ( K`, `GS ( L` graphics, motion units `GS P`).
-- **Buzzer via the manufacturer command** (`ESC ( A` / `GS ( A`) — only the simple `BEL` buzzer is handled.
-- **International / code-page glyphs** beyond what the bundled font and the `ESC R` / `ESC t` mapping cover.
+- **Page-mode coordinate system** — page mode buffers output and rasterizes it on `FF`, but absolute/relative positioning (`ESC $`, `GS $`, `GS \`) and print direction (`ESC T`) are accepted as no-ops rather than fully positioned.
+- **User-defined glyph substitution** — `ESC &` glyphs are parsed and stored, but the inline text renderer still draws the font glyph rather than the custom bitmap.
+- **MaxiCode / GS1 DataBar / Composite** 2D symbologies (`GS ( k` cn=50/51/52).
+- **Graphics commands** `GS ( L` / `GS 8 L` (NV/raster graphics store-and-print) and other `ESC *`-family densities.
+- **Real-time `DLE DC4`** functions other than the cash-drawer pulse (power-off, recover-and-cancel, buzzer).
+- **Katakana / CJK code pages** render as missing glyphs since the bundled Latin font has no such glyphs.
 
 Contributions welcome — new commands follow the simple `BaseCommand` pattern in
 [`EscPos/Commands`](EscPos/Commands) and are registered in

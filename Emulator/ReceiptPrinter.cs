@@ -315,6 +315,7 @@ public class ReceiptPrinter
     /// </remarks>
     public void LineFeed()
     {
+        if (Blocked()) return; // don't advance paper (adds blank lines) while not ready
         Logger.Info($"Line feed");
         CurrentReceipt.AdvanceToNewLine();
     }

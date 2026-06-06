@@ -86,6 +86,13 @@ public class EscPosInterpreter
         RegisterCommand(new TransmitStatusCommand());     // 0x1D, 0x72, n
         RegisterCommand(new TransmitPrinterIdCommand());  // 0x1D, 0x49, n
         RegisterCommand(new EnableAutoStatusBackCommand()); // 0x1D, 0x61, n
+
+        // Buzzer / configuration
+        RegisterCommand(new BeeperCommand());             // ESC ( A — manufacturer beeper
+        RegisterCommand(new SetMotionUnitsCommand());     // GS P x y
+        RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(E", "GS ( E user setup"));
+        RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(K", "GS ( K print control"));
+        RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(H", "GS ( H response request"));
     }
 
     private void RegisterCommand(BaseCommand command)

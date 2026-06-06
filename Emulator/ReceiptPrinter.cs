@@ -28,10 +28,11 @@ public class ReceiptPrinter
     private HriPosition _hriPosition = HriPosition.None;
     private PrinterFont _hriFont = PrinterFont.FontA;
 
-    // QR (2D) state — ESC/POS GS ( k (cn=49)
+    // 2D symbol state — ESC/POS GS ( k (cn: 48=PDF417, 49=QR, 54=DataMatrix, 55=Aztec)
     private int _qrModuleSize = 3;
     private QRCodeGenerator.ECCLevel _qrEcc = QRCodeGenerator.ECCLevel.M;
     private string _qrData = string.Empty;
+    private int _2dCn = 49;
 
     public Receipt CurrentReceipt { get; private set; } = null!; // set via StartNewReceipt in ctor
     public List<Receipt> ReceiptStack { get; private set; }
@@ -422,11 +423,11 @@ public class ReceiptPrinter
 
     #endregion
 
-    #region QR (2D)
+    #region 2D symbols (QR / PDF417 / DataMatrix / Aztec)
 
     public void SetQrModuleSize(int dots)
     {
-        Logger.Info($"Set QR module size: {dots}");
+        Logger.Info($"Set 2D module size: {dots}");
         _qrModuleSize = dots;
     }
 
@@ -436,28 +437,37 @@ public class ReceiptPrinter
         _qrEcc = ecc;
     }
 
-    public void StoreQrData(string data)
+    /// <summary>Stores data for a 2D symbol of family <paramref name="cn"/> (GS ( k fn 80).</summary>
+    public void Store2DData(int cn, string data)
     {
-        Logger.Info($"Store QR data ({data.Length} bytes)");
+        Logger.Info($"Store 2D data (cn={cn}, {data.Length} bytes)");
+        _2dCn = cn;
         _qrData = data;
     }
 
-    public void PrintQr()
+    /// <summary>Renders and prints the stored 2D symbol (GS ( k fn 81).</summary>
+    public void Print2D()
     {
-        Logger.Info($"Print QR: {_qrData}");
-
         if (string.IsNullOrEmpty(_qrData))
             return;
 
+        Logger.Info($"Print 2D symbol (cn={_2dCn}): {_qrData}");
         try
         {
-            var bmp = BarcodeRenderer.RenderQr(_qrData, _qrModuleSize, _qrEcc);
+            SKBitmap bmp = _2dCn switch
+            {
+                49 => BarcodeRenderer.RenderQr(_qrData, _qrModuleSize, _qrEcc),                 // QR Code
+                48 => BarcodeRenderer.Render2D(_qrData, BarcodeFormat.PDF_417, _qrModuleSize),  // PDF417
+                54 => BarcodeRenderer.Render2D(_qrData, BarcodeFormat.DATA_MATRIX, _qrModuleSize),
+                55 => BarcodeRenderer.Render2D(_qrData, BarcodeFormat.AZTEC, _qrModuleSize),
+                _ => BarcodeRenderer.RenderQr(_qrData, _qrModuleSize, _qrEcc)
+            };
             CurrentReceipt.PrintBitmap(bmp);
         }
         catch (Exception ex)
         {
-            Logger.Exception(ex, $"Failed to render QR for data '{_qrData}'");
-            PrintText("[QR error]");
+            Logger.Exception(ex, $"Failed to render 2D symbol (cn={_2dCn}) for '{_qrData}'");
+            PrintText("[2D symbol error]");
             LineFeed();
         }
     }

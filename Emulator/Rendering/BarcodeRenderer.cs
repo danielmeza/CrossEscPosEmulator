@@ -101,6 +101,37 @@ public static class BarcodeRenderer
         return bmp;
     }
 
+    /// <summary>
+    /// Renders a 2D matrix symbology (PDF417, DataMatrix, Aztec, …) via ZXing. The symbol is encoded
+    /// at native resolution and each module drawn as a <paramref name="moduleSize"/> square.
+    /// </summary>
+    public static SKBitmap Render2D(string content, BarcodeFormat format, int moduleSize)
+    {
+        moduleSize = Math.Clamp(moduleSize, 1, 16);
+
+        var writer = new BarcodeWriterGeneric
+        {
+            Format = format,
+            Options = new EncodingOptions { Width = 0, Height = 0, Margin = 0, PureBarcode = true }
+        };
+
+        BitMatrix matrix = writer.Encode(content);
+        int cols = matrix.Width, rows = matrix.Height;
+
+        var bmp = new SKBitmap(cols * moduleSize, rows * moduleSize);
+        using var canvas = new SKCanvas(bmp);
+        canvas.Clear(SKColors.White);
+
+        using var black = new SKPaint { Color = SKColors.Black, IsAntialias = false };
+        for (int y = 0; y < rows; y++)
+            for (int x = 0; x < cols; x++)
+                if (matrix[x, y])
+                    canvas.DrawRect(SKRect.Create(x * moduleSize, y * moduleSize, moduleSize, moduleSize), black);
+
+        canvas.Flush();
+        return bmp;
+    }
+
     private static void DrawHriText(SKCanvas canvas, string text, string fontFamily, int sizeDots,
         int barWidth, int yTop)
     {

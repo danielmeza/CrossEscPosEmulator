@@ -293,6 +293,40 @@ public class ReceiptPrinter
         CurrentReceipt.PrintBitmap(bitmap);
     }
 
+    private SKBitmap? _downloadBitImage;
+
+    /// <summary>Stores a downloaded bit image (GS * x y ...) for later printing by GS /.</summary>
+    public void DefineDownloadBitImage(SKBitmap bmp)
+    {
+        Logger.Info($"Define download bit image {bmp.Width}x{bmp.Height}");
+        _downloadBitImage?.Dispose();
+        _downloadBitImage = bmp;
+    }
+
+    /// <summary>Prints the stored downloaded bit image (GS / m) with the given scaling mode.</summary>
+    public void PrintDownloadBitImage(int mode)
+    {
+        if (_downloadBitImage is null)
+            return;
+
+        int sx = mode is 1 or 3 ? 2 : 1; // double-width on modes 1,3
+        int sy = mode is 2 or 3 ? 2 : 1; // double-height on modes 2,3
+
+        if (sx == 1 && sy == 1)
+        {
+            CurrentReceipt.PrintBitmap(_downloadBitImage.Copy());
+            return;
+        }
+
+        var scaled = new SKBitmap(_downloadBitImage.Width * sx, _downloadBitImage.Height * sy);
+        using (var canvas = new SKCanvas(scaled))
+        {
+            canvas.Clear(SKColors.White);
+            canvas.DrawBitmap(_downloadBitImage, SKRect.Create(0, 0, scaled.Width, scaled.Height));
+        }
+        CurrentReceipt.PrintBitmap(scaled);
+    }
+
     public void Buzz()
     {
         Logger.Info("Buzzer");

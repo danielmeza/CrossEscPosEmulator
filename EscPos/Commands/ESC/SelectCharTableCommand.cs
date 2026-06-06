@@ -27,6 +27,6 @@ public class SelectCharTableCommand : BaseCommand
 
     public override void Execute(ReceiptPrinter printer, string? args)
     {
-       
+        printer.SetCodePage(_n);
     }
 }

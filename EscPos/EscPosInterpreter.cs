@@ -22,6 +22,9 @@ public class EscPosInterpreter
     private bool _interpretingCommandArgs;
     private BaseCommand? _activeCommand;
 
+    private bool _realtimeMode;
+    private readonly List<int> _realtimeBuffer = new();
+
     public EscPosInterpreter(ReceiptPrinter printer)
     {
         _printer = printer;
@@ -78,6 +81,11 @@ public class EscPosInterpreter
         RegisterCommand(new SelectHriFontCommand());      // 0x1D, 0x66, n
         RegisterCommand(new PrintBarcodeCommand());       // 0x1D, 0x6B, m ...
         RegisterCommand(new PrintQrCommand());            // 0x1D, 0x28, 0x6B, ...
+
+        // GS - status / transmit-back
+        RegisterCommand(new TransmitStatusCommand());     // 0x1D, 0x72, n
+        RegisterCommand(new TransmitPrinterIdCommand());  // 0x1D, 0x49, n
+        RegisterCommand(new EnableAutoStatusBackCommand()); // 0x1D, 0x61, n
     }
 
     private void RegisterCommand(BaseCommand command)
@@ -119,11 +127,59 @@ public class EscPosInterpreter
 
     #endregion
 
+    /// <summary>
+    /// Dispatches a real-time DLE command once enough bytes have accumulated. Returns true when the
+    /// command is complete (or unsupported and abandoned), false when more bytes are needed.
+    /// </summary>
+    private bool TryDispatchRealtime()
+    {
+        int first = _realtimeBuffer[0];
+        switch (first)
+        {
+            case 0x04: // DLE EOT n — real-time status
+                if (_realtimeBuffer.Count < 2) return false;
+                _printer.TransmitRealtimeStatus(_realtimeBuffer[1]);
+                return true;
+
+            case 0x05: // DLE ENQ — real-time recover
+                _printer.RealtimeRecover();
+                return true;
+
+            case 0x14: // DLE DC4 fn ... — real-time request
+                if (_realtimeBuffer.Count < 2) return false;
+                int fn = _realtimeBuffer[1];
+                if (fn == 0x01) // generate pulse (cash drawer): DLE DC4 1 m t
+                {
+                    if (_realtimeBuffer.Count < 4) return false;
+                    _printer.KickCashDrawer(_realtimeBuffer[2]);
+                    return true;
+                }
+                Logger.Info($"Unsupported real-time DLE DC4 fn={fn}");
+                return true;
+
+            default:
+                Logger.Info($"Unsupported real-time DLE sequence: 0x{first:X2}");
+                return true;
+        }
+    }
+
     public void Interpret(string ascii)
     {
         for (var i = 0; i < ascii.Length; i++)
         {
             var currentChar = ascii[i];
+
+            // Real-time commands (DLE ...) bypass the print buffer and are answered immediately.
+            if (_realtimeMode)
+            {
+                _realtimeBuffer.Add((byte)currentChar);
+                if (TryDispatchRealtime())
+                {
+                    _realtimeMode = false;
+                    _realtimeBuffer.Clear();
+                }
+                continue;
+            }
 
             #region Command modes
 
@@ -230,15 +286,20 @@ public class EscPosInterpreter
 
             if (currentChar == DLE)
             {
-                // Prefix for real-time commands (pulse, power-off, buzzer, status, etc)
-                throw new NotImplementedException("Not supported: DLE / real time commands");
+                // Prefix for real-time commands (status, pulse/drawer, recover, etc).
+                _realtimeMode = true;
+                _realtimeBuffer.Clear();
+                continue;
             }
 
             if (currentChar == CAN)
             {
-                // Cancel print data in Page mode
-                throw new NotImplementedException("Not supported: page mode");
+                // Cancel print data in the current page-mode area (page mode handled below).
+                _printer.CancelPageData();
+                continue;
             }
+
+            // (page-mode FF/CAN are wired through the printer's page-mode methods)
 
             if (currentChar == ESC || currentChar == FS || currentChar == GS)
             {

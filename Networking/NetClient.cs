@@ -1,15 +1,16 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ReceiptPrinterEmulator.Emulator;
+using ReceiptPrinterEmulator.Emulator.Abstraction;
 using ReceiptPrinterEmulator.Logging;
 
 namespace ReceiptPrinterEmulator.Networking;
 
-public class NetClient
+public class NetClient : IPrinterResponder
 {
     public readonly NetServer Server;
     public readonly EndPoint RemoteEndPoint;
@@ -19,7 +20,7 @@ public class NetClient
     private CancellationTokenSource _lifetimeCts;
 
     public bool IsConnected => _socket.Connected;
-    
+
     public NetClient(NetServer server, ReceiptPrinter printer, Socket clientSocket)
     {
         Server = server;
@@ -28,17 +29,35 @@ public class NetClient
 
         _socket = clientSocket;
         _lifetimeCts = new();
+
+        _printer.RegisterResponder(this); // allow status/transmit-back commands to reply to us
     }
 
     public void Close()
     {
         if (!_lifetimeCts.IsCancellationRequested)
             _lifetimeCts.Cancel();
-        
+
+        _printer.UnregisterResponder(this);
+
         _socket.Shutdown(SocketShutdown.Both);
         _socket.Close();
-        
+
         Logger.Info($"Closed client connection {RemoteEndPoint}");
+    }
+
+    /// <summary>Writes a printer response (status bytes, printer ID, …) back to this client.</summary>
+    public void Send(byte[] data)
+    {
+        try
+        {
+            if (_socket.Connected)
+                _socket.Send(data);
+        }
+        catch (Exception ex)
+        {
+            Logger.Exception(ex, $"Failed to send {data.Length} bytes to {RemoteEndPoint}");
+        }
     }
 
     public async Task ReceiveLoopAsync()
@@ -71,5 +90,5 @@ public class NetClient
     }
 
     private void HandleIncomingData(ReadOnlySpan<byte> data) =>
-        _printer.FeedEscPos(Encoding.Latin1.GetString(data));
+        _printer.FeedEscPos(Encoding.Latin1.GetString(data), this);
 }

@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using ReceiptPrinterEmulator.Emulator;
 using ReceiptPrinterEmulator.Services;
 using ReceiptPrinterEmulator.ViewModels;
@@ -21,6 +22,8 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var printer = new ReceiptPrinter(PaperConfiguration.Default);
+            // Marshal off-thread state mutations (e.g. a drawer kick over TCP) to the UI thread.
+            printer.UiDispatch = a => Dispatcher.UIThread.Post(a);
             var notifications = new NotificationService();
             var dialogs = new FileDialogService();
 

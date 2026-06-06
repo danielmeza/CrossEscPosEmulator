@@ -40,6 +40,13 @@ internal sealed class UsbStream : Stream
     private int _readPos;
     private int _readLen;
 
+    // Native libusb transfers and the device/context teardown must never overlap: closing the
+    // handle while a bulk read is in flight on the printer's background read thread is a native
+    // use-after-free that crashes the whole process (no managed catch can stop it). All native I/O
+    // and the close run under this lock, and _closing short-circuits any I/O issued after teardown.
+    private readonly Lock _ioLock = new();
+    private volatile bool _closing;
+
     public UsbStream(UsbContext context, IDisposable devices, IUsbDevice device,
         UsbEndpointWriter writer, UsbEndpointReader? reader)
     {
@@ -61,23 +68,32 @@ internal sealed class UsbStream : Stream
     public override void Write(byte[] buffer, int offset, int count)
     {
         var data = offset == 0 && count == buffer.Length ? buffer : buffer.AsSpan(offset, count).ToArray();
-        _writer.Write(data, WriteTimeoutMs, out _);
+        lock (_ioLock)
+        {
+            if (_closing) return;
+            _writer.Write(data, WriteTimeoutMs, out _);
+        }
     }
 
     public override int Read(byte[] buffer, int offset, int count)
     {
-        if (_reader is null)
+        if (_reader is null || _closing)
         {
-            // Send-only device (no bulk-IN endpoint): idle so the printer's read loop doesn't spin.
+            // Send-only device (no bulk-IN endpoint), or we're tearing down: idle briefly so the
+            // printer's read loop doesn't spin, and never touch the (closing) native handle.
             Thread.Sleep(ReadTimeoutMs);
             return 0;
         }
 
         if (_readPos >= _readLen)
         {
-            _reader.Read(_readBuffer, ReadTimeoutMs, out int got);
-            _readPos = 0;
-            _readLen = Math.Max(0, got);
+            lock (_ioLock)
+            {
+                if (_closing) return 0; // device closed out from under us between the check and the lock.
+                _reader.Read(_readBuffer, ReadTimeoutMs, out int got);
+                _readPos = 0;
+                _readLen = Math.Max(0, got);
+            }
             if (_readLen == 0)
                 return 0; // timed out with no status bytes — try again next loop.
         }
@@ -95,9 +111,16 @@ internal sealed class UsbStream : Stream
     {
         if (disposing)
         {
-            try { _device.Close(); } catch { /* ignore */ }
-            try { _devices.Dispose(); } catch { /* ignore */ }
-            try { _context.Dispose(); } catch { /* ignore */ }
+            // Flag first so any read/write that hasn't yet taken the lock bails out without touching
+            // the native handle, then take the lock to wait for any in-flight transfer (bounded by
+            // the read/write timeouts) to finish before freeing the device and context.
+            _closing = true;
+            lock (_ioLock)
+            {
+                try { _device.Close(); } catch { /* ignore */ }
+                try { _devices.Dispose(); } catch { /* ignore */ }
+                try { _context.Dispose(); } catch { /* ignore */ }
+            }
         }
         base.Dispose(disposing);
     }

@@ -1,4 +1,5 @@
 using Avalonia;
+using ReceiptPrinterEmulator.Logging;
 
 namespace ReceiptPrinterEmulator;
 
@@ -8,8 +9,13 @@ public static class Program
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     [System.STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static void Main(string[] args)
+    {
+        // Register process-wide exception logging before anything else so startup failures and
+        // background-thread crashes (e.g. transport teardown) are recorded rather than lost.
+        Logger.InstallGlobalHandlers();
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()

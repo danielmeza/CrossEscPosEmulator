@@ -37,8 +37,19 @@
         <Border DockPanel.Dock="Top" Background="#1f1f1f" CornerRadius="6" Padding="12" Margin="0 0 0 10">
             <StackPanel>
                 <TextBlock Text="Printer status (from emulator)" Classes="label" Margin="0 0 0 6"/>
-                <TextBlock Text="{Binding StatusText}" Foreground="#3CE07A" FontFamily="monospace"
-                           TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding StatusText}" Foreground="White" FontWeight="Bold" Margin="0 0 0 8"/>
+                <ItemsControl ItemsSource="{Binding Indicators}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:StatusIndicator">
+                            <Grid ColumnDefinitions="Auto,110,*" Margin="0 3">
+                                <Ellipse Grid.Column="0" Width="12" Height="12" Fill="{Binding Color}"
+                                         VerticalAlignment="Center" Margin="0 0 8 0"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Label}" Foreground="#BBBBBB" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{Binding Value}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </Border>
 

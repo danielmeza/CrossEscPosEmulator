@@ -56,6 +56,41 @@ public class ReceiptPrinter
     public event Action? OnBuzzer;
     public event Action? OnCashDrawer;
 
+    /// <summary>Raised (with a human-readable reason) when a print operation is dropped because the
+    /// printer isn't ready (out of paper, cover open, offline, error).</summary>
+    public event Action<string>? OnPrintBlocked;
+
+    private bool _blockedNotified;
+
+    /// <summary>Whether the printer can currently put marks on paper, like a real device.</summary>
+    public bool CanPrint => State.Online
+                            && !State.CoverOpen
+                            && State.Paper != PaperLevel.Out
+                            && State.Error == PrinterErrorState.None;
+
+    private string NotReadyReason() =>
+        !State.Online ? "Printer offline"
+        : State.CoverOpen ? "Cover is open"
+        : State.Paper == PaperLevel.Out ? "Out of paper"
+        : State.Error != PrinterErrorState.None ? $"Printer error ({State.Error})"
+        : string.Empty;
+
+    /// <summary>Returns true (and notifies once) when printing must be dropped due to printer state.</summary>
+    private bool Blocked()
+    {
+        if (CanPrint)
+            return false;
+
+        if (!_blockedNotified)
+        {
+            _blockedNotified = true;
+            var reason = NotReadyReason();
+            Logger.Info($"Print blocked: {reason}");
+            OnPrintBlocked?.Invoke(reason);
+        }
+        return true;
+    }
+
     // Active character code table (ESC t). Default PC437; high bytes are remapped to Unicode.
     private Encoding _codePage = Encoding.Latin1;
 
@@ -78,8 +113,13 @@ public class ReceiptPrinter
 
         PowerCycle();
 
-        // Push Automatic Status Back to the host whenever the simulated state changes.
-        State.Changed += () => { if (_asbMask != 0) BroadcastStatus(StatusByteBuilder.AutoStatusBack(State)); };
+        // Push Automatic Status Back to the host whenever the simulated state changes, and re-arm
+        // the "print blocked" notification once the printer becomes ready again.
+        State.Changed += () =>
+        {
+            if (CanPrint) _blockedNotified = false;
+            if (_asbMask != 0) BroadcastStatus(StatusByteBuilder.AutoStatusBack(State));
+        };
     }
 
     #region Host responses
@@ -199,6 +239,8 @@ public class ReceiptPrinter
 
     public void PrintText(string text)
     {
+        if (Blocked()) return;
+
         text = RemapCodePage(text);
         Logger.Info($"Print: {text}");
 
@@ -347,6 +389,8 @@ public class ReceiptPrinter
 
     public void PrintBitmap(SKBitmap bitmap)
     {
+        if (Blocked()) return;
+
         Logger.Info($"Print bitmap: {bitmap.Width}x{bitmap.Height}");
 
         CurrentReceipt.PrintBitmap(bitmap);
@@ -390,6 +434,7 @@ public class ReceiptPrinter
     {
         if (_downloadBitImage is null)
             return;
+        if (Blocked()) return;
 
         int sx = mode is 1 or 3 ? 2 : 1; // double-width on modes 1,3
         int sy = mode is 2 or 3 ? 2 : 1; // double-height on modes 2,3
@@ -572,6 +617,7 @@ public class ReceiptPrinter
 
     public void PrintBarcode(BarcodeFormat format, string data)
     {
+        if (Blocked()) return;
         Logger.Info($"Print barcode [{format}]: {data}");
 
         var hriFontConfig = _paperConfiguration.GetFont(_hriFont);
@@ -623,6 +669,7 @@ public class ReceiptPrinter
     {
         if (string.IsNullOrEmpty(_qrData))
             return;
+        if (Blocked()) return;
 
         Logger.Info($"Print 2D symbol (cn={_2dCn}): {_qrData}");
         try

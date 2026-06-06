@@ -204,7 +204,9 @@ write to `COM4`.
 Sending test jobs is the **monitor's** job — the emulator is the device, the monitor is the POS-side
 client that drives it over the wire (just like a real application would). Click **Open monitor…** to
 launch a second window (built on [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) that connects
-back to the emulator over TCP and lets you exercise it without writing any code:
+back to the emulator over **TCP or a serial port** (toggle the transport; the serial path pairs with
+the emulator's serial transport via a virtual port bridge) and lets you exercise it without writing
+any code:
 
 - Print a sample receipt, all 1D barcodes, or QR / PDF417 / DataMatrix / Aztec.
 - Send the full feature test receipt, open the cash drawer, buzz, or cut.

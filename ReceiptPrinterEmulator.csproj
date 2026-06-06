@@ -6,6 +6,9 @@
         <Nullable>enable</Nullable>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <!-- Security-audit findings (vulnerable packages) must fail the build/CI, not just warn. -->
+        <NuGetAuditMode>all</NuGetAuditMode>
         <ApplicationIcon>Assets/Icon/icon.ico</ApplicationIcon>
         <AssemblyName>ReceiptPrinterEmulator</AssemblyName>
         <Version>1.0.0</Version>
@@ -27,10 +30,11 @@
         <PackageReference Include="ZXing.Net" Version="0.16.11" />
         <!-- Serial-port transport (RS-232 / virtual PTY simulation) -->
         <PackageReference Include="System.IO.Ports" Version="10.0.8" />
-        <!-- Legacy code pages (PC437/850/852/858/866/1252…) for ESC t character tables -->
-        <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.0" />
         <!-- ESC/POS client library, used by the built-in Monitor window to exercise the emulator -->
         <PackageReference Include="ESCPOS_NET" Version="3.0.0" />
+        <!-- Override ESCPOS_NET's vulnerable transitive SixLabors.ImageSharp 2.1.3 with the patched
+             2.1.x (Apache-licensed) release. -->
+        <PackageReference Include="SixLabors.ImageSharp" Version="2.1.13" />
     </ItemGroup>
 
     <ItemGroup>

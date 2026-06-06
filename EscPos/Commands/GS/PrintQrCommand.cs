@@ -1,6 +1,7 @@
 using System.Text;
 using QRCoder;
 using ReceiptPrinterEmulator.Emulator;
+using ReceiptPrinterEmulator.Emulator.Rendering;
 using ReceiptPrinterEmulator.Logging;
 
 namespace ReceiptPrinterEmulator.EscPos.Commands.GS;
@@ -17,6 +18,14 @@ public class PrintQrCommand : BaseCommand
 {
     public override string Prefix => EscPosInterpreter.GS + "(k";
     public override bool HasArgs => true;
+
+    // GS ( k function codes (the fn parameter).
+    private const int FnModel = 65;
+    private const int FnModuleSize = 67;
+    private const int FnErrorCorrection = 69;
+    private const int FnStoreData = 80;
+    private const int FnPrintSymbol = 81;
+    private const int FnTransmitSize = 82;
 
     private enum Phase { PL, PH, CN, FN, Params }
 
@@ -74,7 +83,8 @@ public class PrintQrCommand : BaseCommand
 
     public override void Execute(ReceiptPrinter printer, string? args)
     {
-        if (_cn is not (48 or 49 or 54 or 55))
+        if (_cn is not (TwoDimensionCode.Pdf417 or TwoDimensionCode.QrCode
+            or TwoDimensionCode.DataMatrix or TwoDimensionCode.Aztec))
         {
             Logger.Info($"Unsupported 2D symbol cn={_cn}");
             return;
@@ -84,29 +94,29 @@ public class PrintQrCommand : BaseCommand
 
         switch (_fn)
         {
-            case 65: // select model / options — informational
+            case FnModel: // select model / options — informational
                 Logger.Info($"2D select model/options: {(p.Length > 0 ? (int)p[0] : 0)}");
                 break;
 
-            case 67: // module size (also PDF417 column width etc.)
+            case FnModuleSize: // module size (also PDF417 column width etc.)
                 if (p.Length > 0)
                     printer.SetQrModuleSize((byte)p[0]);
                 break;
 
-            case 69: // error correction level (QR)
+            case FnErrorCorrection: // error correction level (QR)
                 if (p.Length > 0)
                     printer.SetQrErrorCorrection(MapEcc((byte)p[0]));
                 break;
 
-            case 80: // store data in symbol storage area: p[0] = m, rest = data
+            case FnStoreData: // store data in symbol storage area: p[0] = m, rest = data
                 printer.Store2DData(_cn, p.Length > 1 ? p.Substring(1) : string.Empty);
                 break;
 
-            case 81: // print the symbol data in the storage area
+            case FnPrintSymbol: // print the symbol data in the storage area
                 printer.Print2D();
                 break;
 
-            case 82: // transmit size info — not applicable to an emulator
+            case FnTransmitSize: // transmit size info — not applicable to an emulator
                 break;
 
             default:

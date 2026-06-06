@@ -678,10 +678,10 @@ public class ReceiptPrinter
         {
             SKBitmap bmp = _2dCn switch
             {
-                49 => BarcodeRenderer.RenderQr(_qrData, _qrModuleSize, _qrEcc),                 // QR Code
-                48 => BarcodeRenderer.Render2D(_qrData, BarcodeFormat.PDF_417, _qrModuleSize),  // PDF417
-                54 => BarcodeRenderer.Render2D(_qrData, BarcodeFormat.DATA_MATRIX, _qrModuleSize),
-                55 => BarcodeRenderer.Render2D(_qrData, BarcodeFormat.AZTEC, _qrModuleSize),
+                TwoDimensionCode.QrCode => BarcodeRenderer.RenderQr(_qrData, _qrModuleSize, _qrEcc),
+                TwoDimensionCode.Pdf417 => BarcodeRenderer.Render2D(_qrData, BarcodeFormat.PDF_417, _qrModuleSize),
+                TwoDimensionCode.DataMatrix => BarcodeRenderer.Render2D(_qrData, BarcodeFormat.DATA_MATRIX, _qrModuleSize),
+                TwoDimensionCode.Aztec => BarcodeRenderer.Render2D(_qrData, BarcodeFormat.AZTEC, _qrModuleSize),
                 _ => BarcodeRenderer.RenderQr(_qrData, _qrModuleSize, _qrEcc)
             };
             CurrentReceipt.PrintBitmap(bmp);

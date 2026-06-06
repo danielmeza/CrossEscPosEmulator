@@ -50,13 +50,15 @@ public class NotificationService : INotificationService
             }
             else if (OperatingSystem.IsWindows())
             {
-                // Console.Beep is synchronous — run it off the UI thread.
+                // Console.Beep is synchronous — run it off the UI thread. The platform guard is
+                // repeated inside the lambda so the analyzer sees it at the call site (CA1416).
                 Task.Run(() =>
                 {
+                    if (!OperatingSystem.IsWindows()) return;
                     try
                     {
-                        BeepWindows(isDrawer ? 600 : 1000, 180);
-                        if (isDrawer) BeepWindows(900, 180);
+                        Console.Beep(isDrawer ? 600 : 1000, 180);
+                        if (isDrawer) Console.Beep(900, 180);
                     }
                     catch { /* ignore */ }
                 });
@@ -100,9 +102,6 @@ public class NotificationService : INotificationService
             return false; // tool not installed — caller falls back
         }
     }
-
-    [SupportedOSPlatform("windows")]
-    private static void BeepWindows(int frequency, int durationMs) => Console.Beep(frequency, durationMs);
 
     private void Flash()
     {

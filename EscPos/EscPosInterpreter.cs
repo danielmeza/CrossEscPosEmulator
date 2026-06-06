@@ -102,6 +102,11 @@ public class EscPosInterpreter
         RegisterCommand(new Commands.FixedArgNoOpCommand(EscPosInterpreter.ESC + "$", 2, "ESC $ absolute position"));
         RegisterCommand(new Commands.FixedArgNoOpCommand(EscPosInterpreter.GS + "$", 2, "GS $ absolute vertical"));
         RegisterCommand(new Commands.FixedArgNoOpCommand(EscPosInterpreter.GS + "\\", 2, "GS \\ relative vertical"));
+
+        // User-defined characters
+        RegisterCommand(new DefineUserDefinedCharsCommand());  // ESC &
+        RegisterCommand(new EnableUserDefinedCharsCommand());  // ESC %
+        RegisterCommand(new CancelUserDefinedCharCommand());   // ESC ?
         RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(E", "GS ( E user setup"));
         RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(K", "GS ( K print control"));
         RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(H", "GS ( H response request"));

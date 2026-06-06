@@ -56,6 +56,15 @@ public class ReceiptPrinter
     public event Action? OnBuzzer;
     public event Action? OnCashDrawer;
 
+    // Active character code table (ESC t). Default PC437; high bytes are remapped to Unicode.
+    private Encoding _codePage = Encoding.Latin1;
+
+    static ReceiptPrinter()
+    {
+        // Enable legacy code pages (437/850/852/858/866/1252…) on every platform.
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
     public ReceiptPrinter(PaperConfiguration paperConfiguration)
     {
         _paperConfiguration = paperConfiguration;
@@ -190,9 +199,59 @@ public class ReceiptPrinter
 
     public void PrintText(string text)
     {
+        text = RemapCodePage(text);
         Logger.Info($"Print: {text}");
-        
-        CurrentReceipt.PrintText(text,_printMode);
+
+        CurrentReceipt.PrintText(text, _printMode);
+    }
+
+    /// <summary>Selects the character code table (ESC t n), mapping the ESC/POS table to a code page.</summary>
+    public void SetCodePage(int table)
+    {
+        int cp = table switch
+        {
+            0 => 437,   // PC437 USA / standard Europe
+            1 => 932,   // Katakana (approx via Shift-JIS)
+            2 => 850,   // PC850 multilingual
+            3 => 860,   // PC860 Portuguese
+            4 => 863,   // PC863 Canadian-French
+            5 => 865,   // PC865 Nordic
+            16 => 1252, // Windows-1252
+            17 => 866,  // PC866 Cyrillic
+            18 => 852,  // PC852 Latin-2
+            19 => 858,  // PC858 Euro
+            _ => 437
+        };
+
+        try
+        {
+            _codePage = cp == 28591 ? Encoding.Latin1 : Encoding.GetEncoding(cp);
+            Logger.Info($"Select character table {table} -> code page {cp}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Exception(ex, $"Code page {cp} unavailable; keeping current");
+        }
+    }
+
+    /// <summary>Remaps high bytes (>=0x80) of received text through the active code page to Unicode.</summary>
+    private string RemapCodePage(string text)
+    {
+        if (ReferenceEquals(_codePage, Encoding.Latin1))
+            return text;
+
+        var sb = new StringBuilder(text.Length);
+        foreach (var ch in text)
+        {
+            if (ch < 0x80)
+                sb.Append(ch);
+            else
+            {
+                var mapped = _codePage.GetString(new[] { (byte)ch });
+                sb.Append(mapped.Length > 0 ? mapped : "?");
+            }
+        }
+        return sb.ToString();
     }
 
     public void Cut(CutFunction cutFunction = CutFunction.Cut, CutShape cutShape = CutShape.Full, int n = 0)
@@ -291,6 +350,29 @@ public class ReceiptPrinter
         Logger.Info($"Print bitmap: {bitmap.Width}x{bitmap.Height}");
 
         CurrentReceipt.PrintBitmap(bitmap);
+    }
+
+    // User-defined characters (ESC & / % / ?). Captured/stored; inline glyph substitution during
+    // text rendering is not applied (the font glyph is drawn). These rarely appear in modern streams.
+    private readonly Dictionary<int, SKBitmap> _userGlyphs = new();
+    private bool _userDefinedEnabled;
+
+    public void DefineUserGlyph(int code, SKBitmap bmp)
+    {
+        Logger.Info($"Define user glyph 0x{code:X2} ({bmp.Width}x{bmp.Height})");
+        _userGlyphs[code] = bmp;
+    }
+
+    public void EnableUserDefined(bool on)
+    {
+        _userDefinedEnabled = on;
+        Logger.Info($"User-defined characters: {(on ? "enabled" : "disabled")}");
+    }
+
+    public void CancelUserGlyph(int code)
+    {
+        Logger.Info($"Cancel user glyph 0x{code:X2}");
+        _userGlyphs.Remove(code);
     }
 
     private SKBitmap? _downloadBitImage;

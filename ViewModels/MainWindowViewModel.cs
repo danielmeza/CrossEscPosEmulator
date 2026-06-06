@@ -123,6 +123,7 @@ public partial class MainWindowViewModel : ObservableObject
             _notifications.OpenCashDrawer();
             ShowToast("💵  Cash drawer opened");
         });
+        _printer.OnPrintBlocked += reason => Dispatcher.UIThread.Post(() => ShowToast($"🚫  {reason} — print dropped"));
 
         PopulateAddresses(listenAddress);
         RefreshSerialPorts();

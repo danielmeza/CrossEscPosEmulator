@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading.Tasks;
+using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,6 +12,21 @@ using ESCPOS_NET.Emitters;
 using ESCPOS_NET.Utilities;
 
 namespace ReceiptPrinterEmulator.ViewModels;
+
+/// <summary>One status row in the monitor: a colored dot, a label and the current value.</summary>
+public sealed class StatusIndicator
+{
+    public StatusIndicator(string label, string value, IBrush color)
+    {
+        Label = label;
+        Value = value;
+        Color = color;
+    }
+
+    public string Label { get; }
+    public string Value { get; }
+    public IBrush Color { get; }
+}
 
 /// <summary>
 /// View model for the Monitor window — a POS-client that connects to the emulator over TCP using the
@@ -29,6 +45,13 @@ public partial class MonitorWindowViewModel : ObservableObject
     [ObservableProperty] private string _statusText = "Not connected.";
 
     public ObservableCollection<string> Log { get; } = new();
+    public ObservableCollection<StatusIndicator> Indicators { get; } = new();
+
+    private static readonly IBrush Green = new SolidColorBrush(Avalonia.Media.Color.Parse("#3CE07A"));
+    private static readonly IBrush Red = new SolidColorBrush(Avalonia.Media.Color.Parse("#E0533C"));
+    private static readonly IBrush Amber = new SolidColorBrush(Avalonia.Media.Color.Parse("#E0A93C"));
+    private static readonly IBrush Blue = new SolidColorBrush(Avalonia.Media.Color.Parse("#3C9AE0"));
+    private static readonly IBrush Gray = new SolidColorBrush(Avalonia.Media.Color.Parse("#777777"));
 
     public MonitorWindowViewModel(int defaultPort)
     {
@@ -107,12 +130,26 @@ public partial class MonitorWindowViewModel : ObservableObject
     private void OnStatusChanged(object? sender, EventArgs e)
     {
         if (e is not PrinterStatusEventArgs s) return;
-        string Fmt(bool? b) => b is null ? "?" : (b.Value ? "yes" : "no");
-        var text =
-            $"Online: {Fmt(s.IsPrinterOnline)}   Cover open: {Fmt(s.IsCoverOpen)}\n" +
-            $"Paper out: {Fmt(s.IsPaperOut)}   Paper low: {Fmt(s.IsPaperLow)}\n" +
-            $"Drawer open: {Fmt(s.IsCashDrawerOpen)}   Error: {Fmt(s.IsInErrorState)}";
-        Dispatcher.UIThread.Post(() => StatusText = text);
+
+        bool online = s.IsPrinterOnline == true;
+        bool paperOut = s.IsPaperOut == true;
+        bool paperLow = s.IsPaperLow == true;
+        bool cover = s.IsCoverOpen == true;
+        bool drawer = s.IsCashDrawerOpen == true;
+        bool error = s.IsInErrorState == true;
+        bool ready = online && !paperOut && !cover && !error;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            StatusText = ready ? "● Ready" : "● Not ready";
+            Indicators.Clear();
+            Indicators.Add(new("Printer", online ? "Online" : "Offline", online ? Green : Red));
+            Indicators.Add(new("Paper", paperOut ? "Out" : paperLow ? "Low" : "OK",
+                paperOut ? Red : paperLow ? Amber : Green));
+            Indicators.Add(new("Cover", cover ? "Open" : "Closed", cover ? Red : Green));
+            Indicators.Add(new("Cash drawer", drawer ? "Open" : "Closed", drawer ? Blue : Gray));
+            Indicators.Add(new("Error", error ? "Yes" : "None", error ? Red : Green));
+        });
         Append("← status update");
     }
 

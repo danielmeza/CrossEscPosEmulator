@@ -114,7 +114,8 @@ each `v*` tag.
 The emulator is **bidirectional**: status commands (`DLE EOT`, `GS r`, `GS I`) and Automatic Status
 Back reply to the host over the same TCP/serial connection, driven by the **Printer state** panel
 (right side) where you can simulate paper-out/near-end, cover open, cash-drawer open/closed,
-offline, and error conditions.
+offline, and error conditions. Like a real device, the emulator **refuses to print** while it isn't
+ready (out of paper, cover open, offline, or in an error state) and shows a notification instead.
 
 Barcodes and QR codes render inline on the receipt, with optional HRI text:
 

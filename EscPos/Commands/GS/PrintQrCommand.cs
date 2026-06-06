@@ -6,18 +6,17 @@ using ReceiptPrinterEmulator.Logging;
 namespace ReceiptPrinterEmulator.EscPos.Commands.GS;
 
 /// <summary>
-/// 2D symbol commands (GS ( k pL pH cn fn ...). Only QR Code (cn = 49) is implemented:
-///   fn 65: select model     fn 67: module size    fn 69: error correction level
-///   fn 80: store data        fn 81: print stored symbol
-/// A typical QR is emitted as: set size, set EC, store data, then print.
+/// 2D symbol commands (GS ( k pL pH cn fn ...). Supports QR Code (cn=49), PDF417 (cn=48),
+/// DataMatrix (cn=54) and Aztec (cn=55):
+///   fn 67: module size    fn 69: error correction level (QR)
+///   fn 80: store data      fn 81: print stored symbol
+/// A typical symbol is emitted as: set size, (set EC), store data, then print.
 /// https://reference.epson-biz.com/modules/ref_escpos/index.php?content_id=140
 /// </summary>
 public class PrintQrCommand : BaseCommand
 {
     public override string Prefix => EscPosInterpreter.GS + "(k";
     public override bool HasArgs => true;
-
-    private const int QrCode = 49; // cn for QR Code
 
     private enum Phase { PL, PH, CN, FN, Params }
 
@@ -75,9 +74,9 @@ public class PrintQrCommand : BaseCommand
 
     public override void Execute(ReceiptPrinter printer, string? args)
     {
-        if (_cn != QrCode)
+        if (_cn is not (48 or 49 or 54 or 55))
         {
-            Logger.Info($"Unsupported 2D symbol cn={_cn} (only QR Code is supported)");
+            Logger.Info($"Unsupported 2D symbol cn={_cn}");
             return;
         }
 
@@ -85,33 +84,33 @@ public class PrintQrCommand : BaseCommand
 
         switch (_fn)
         {
-            case 65: // select model (n1 n2) — informational; QRCoder is model 2
-                Logger.Info($"QR select model: {(p.Length > 0 ? (int)p[0] : 0)}");
+            case 65: // select model / options — informational
+                Logger.Info($"2D select model/options: {(p.Length > 0 ? (int)p[0] : 0)}");
                 break;
 
-            case 67: // module size
+            case 67: // module size (also PDF417 column width etc.)
                 if (p.Length > 0)
                     printer.SetQrModuleSize((byte)p[0]);
                 break;
 
-            case 69: // error correction level
+            case 69: // error correction level (QR)
                 if (p.Length > 0)
                     printer.SetQrErrorCorrection(MapEcc((byte)p[0]));
                 break;
 
             case 80: // store data in symbol storage area: p[0] = m, rest = data
-                printer.StoreQrData(p.Length > 1 ? p.Substring(1) : string.Empty);
+                printer.Store2DData(_cn, p.Length > 1 ? p.Substring(1) : string.Empty);
                 break;
 
             case 81: // print the symbol data in the storage area
-                printer.PrintQr();
+                printer.Print2D();
                 break;
 
             case 82: // transmit size info — not applicable to an emulator
                 break;
 
             default:
-                Logger.Info($"Unsupported QR function fn={_fn}");
+                Logger.Info($"Unsupported 2D function fn={_fn}");
                 break;
         }
     }

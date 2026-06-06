@@ -56,7 +56,7 @@
                         </ComboBox>
                         <Button Grid.Column="1" Content="⟳" Command="{Binding RefreshUsbCommand}" ToolTip.Tip="Refresh USB devices"/>
                     </Grid>
-                    <TextBlock Text="Direct USB (libusb) — send-only, no status. Needs libusb installed."
+                    <TextBlock Text="Direct USB (libusb) — reads status from the device's bulk-IN endpoint. Needs libusb installed."
                                Classes="label" TextWrapping="Wrap" Margin="0 4 0 0"/>
                 </StackPanel>
 

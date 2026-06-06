@@ -57,6 +57,7 @@ each `v*` tag.
 - [ZXing.Net](https://github.com/micjahn/ZXing.Net) (1D barcodes) ·
   [QRCoder](https://github.com/codebude/QRCoder) (QR codes) ·
   [System.IO.Ports](https://www.nuget.org/packages/System.IO.Ports) (serial)
+- [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET) (the Monitor test client)
 
 ### Supported commands
 

@@ -13,8 +13,12 @@ using ESCPOS_NET;
 using ESCPOS_NET.Emitters;
 using ESCPOS_NET.Utilities;
 using ReceiptPrinterEmulator.Emulator.Rendering;
+using ReceiptPrinterEmulator.Networking;
 
 namespace ReceiptPrinterEmulator.ViewModels;
+
+/// <summary>Transport the monitor uses to reach the printer.</summary>
+public enum TransportKind { Tcp, Serial, Usb }
 
 /// <summary>One status row in the monitor: a colored dot, a label and the current value.</summary>
 public sealed class StatusIndicator
@@ -42,24 +46,37 @@ public partial class MonitorWindowViewModel : ObservableObject
     private const int DefaultModuleSize = 5; // dots per module for 2D symbols
 
     private readonly EPSON _e = new();
-    private BasePrinter? _printer;
+    private BasePrinter? _printer;       // TCP / serial (ESC-POS-.NET)
+    private UsbBulkTransport? _usb;      // direct USB (libusb), send-only
 
-    [ObservableProperty] private bool _useSerial;
+    [ObservableProperty] private TransportKind _transport = TransportKind.Tcp;
     [ObservableProperty] private string _host = "127.0.0.1";
     [ObservableProperty] private string _port;
     [ObservableProperty] private string? _serialPortName;
     [ObservableProperty] private string _serialBaud = "9600";
+    [ObservableProperty] private UsbDeviceInfo? _selectedUsbDevice;
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private string _connectButtonText = "Connect";
     [ObservableProperty] private string _statusText = "Not connected.";
 
-    /// <summary>True when the TCP transport is selected (for binding the TCP fields' visibility).</summary>
-    public bool IsTcp => !UseSerial;
-    partial void OnUseSerialChanged(bool value) => OnPropertyChanged(nameof(IsTcp));
+    // Transport-selector visibility helpers.
+    public bool IsTcp => Transport == TransportKind.Tcp;
+    public bool IsSerial => Transport == TransportKind.Serial;
+    public bool IsUsb => Transport == TransportKind.Usb;
+    public TransportKind[] Transports { get; } = { TransportKind.Tcp, TransportKind.Serial, TransportKind.Usb };
+
+    partial void OnTransportChanged(TransportKind value)
+    {
+        OnPropertyChanged(nameof(IsTcp));
+        OnPropertyChanged(nameof(IsSerial));
+        OnPropertyChanged(nameof(IsUsb));
+        if (value == TransportKind.Usb) RefreshUsb();
+    }
 
     public ObservableCollection<string> Log { get; } = new();
     public ObservableCollection<StatusIndicator> Indicators { get; } = new();
     public ObservableCollection<string> AvailablePorts { get; } = new();
+    public ObservableCollection<UsbDeviceInfo> AvailableUsbDevices { get; } = new();
 
     private static readonly IBrush Green = new SolidColorBrush(Avalonia.Media.Color.Parse("#3CE07A"));
     private static readonly IBrush Red = new SolidColorBrush(Avalonia.Media.Color.Parse("#E0533C"));
@@ -92,6 +109,24 @@ public partial class MonitorWindowViewModel : ObservableObject
             : AvailablePorts.FirstOrDefault();
     }
 
+    [RelayCommand]
+    private void RefreshUsb()
+    {
+        var current = SelectedUsbDevice;
+        AvailableUsbDevices.Clear();
+        try
+        {
+            foreach (var d in UsbBulkTransport.List())
+                AvailableUsbDevices.Add(d);
+        }
+        catch (Exception ex)
+        {
+            Append($"USB unavailable: {ex.Message} (install libusb — macOS: brew install libusb)");
+        }
+        SelectedUsbDevice = AvailableUsbDevices.FirstOrDefault(d => current is not null && d.Vid == current.Vid && d.Pid == current.Pid)
+            ?? AvailableUsbDevices.FirstOrDefault();
+    }
+
     private void Append(string message) => Dispatcher.UIThread.Post(() =>
     {
         Log.Insert(0, $"{message}");
@@ -100,10 +135,14 @@ public partial class MonitorWindowViewModel : ObservableObject
 
     private async Task Send(string label, params byte[][] parts)
     {
-        if (_printer is null) { Append("Not connected."); return; }
+        var data = ByteSplicer.Combine(parts);
         try
         {
-            await Task.Run(() => _printer.Write(ByteSplicer.Combine(parts)));
+            if (_usb is not null)
+                await Task.Run(() => _usb.Write(data));
+            else if (_printer is not null)
+                await Task.Run(() => _printer.Write(data));
+            else { Append("Not connected."); return; }
             Append($"→ {label}");
         }
         catch (Exception ex)
@@ -117,41 +156,56 @@ public partial class MonitorWindowViewModel : ObservableObject
     [RelayCommand]
     private void ToggleConnect()
     {
-        if (_printer is not null) { Disconnect(); return; }
+        if (IsConnected) { Disconnect(); return; }
 
         try
         {
             string target;
-            if (UseSerial)
+            switch (Transport)
             {
-                if (string.IsNullOrWhiteSpace(SerialPortName)) { Append("No serial port selected."); return; }
-                int baud = int.TryParse(SerialBaud, out var b) && b > 0 ? b : 9600;
-                _printer = new SerialPrinter(portName: SerialPortName, baudRate: baud);
-                target = $"serial {SerialPortName} @ {baud}";
-            }
-            else
-            {
-                _printer = new NetworkPrinter(new NetworkPrinterSettings
-                {
-                    ConnectionString = $"{Host}:{Port}",
-                    PrinterName = "Monitor"
-                });
-                target = $"{Host}:{Port}";
+                case TransportKind.Usb:
+                    if (SelectedUsbDevice is null) { Append("No USB device selected."); return; }
+                    _usb = UsbBulkTransport.Open(SelectedUsbDevice.Vid, SelectedUsbDevice.Pid);
+                    target = SelectedUsbDevice.Display;
+                    Indicators.Clear();
+                    StatusText = "Connected to USB (send-only — no status reported).";
+                    break;
+
+                case TransportKind.Serial:
+                    if (string.IsNullOrWhiteSpace(SerialPortName)) { Append("No serial port selected."); return; }
+                    int baud = int.TryParse(SerialBaud, out var b) && b > 0 ? b : 9600;
+                    _printer = new SerialPrinter(portName: SerialPortName, baudRate: baud);
+                    target = $"serial {SerialPortName} @ {baud}";
+                    break;
+
+                default: // TCP
+                    _printer = new NetworkPrinter(new NetworkPrinterSettings
+                    {
+                        ConnectionString = $"{Host}:{Port}",
+                        PrinterName = "Monitor"
+                    });
+                    target = $"{Host}:{Port}";
+                    break;
             }
 
-            _printer.StatusChanged += OnStatusChanged;
-            // The read/monitor loop starts automatically on connect. Ask the emulator to push status
-            // automatically on every state change so we see panel toggles reflected here.
-            _printer.Write(_e.EnableAutomaticStatusBack());
+            if (_printer is not null)
+            {
+                _printer.StatusChanged += OnStatusChanged;
+                // The read/monitor loop starts on connect. Ask the emulator to push status on every
+                // state change so we see panel toggles reflected here.
+                _printer.Write(_e.EnableAutomaticStatusBack());
+                StatusText = "Monitoring… toggle the Printer state panel to see updates.";
+            }
 
             IsConnected = true;
             ConnectButtonText = "Disconnect";
-            StatusText = "Monitoring… toggle the Printer state panel to see updates.";
             Append($"Connected ({target})");
         }
         catch (Exception ex)
         {
             Append($"connect failed: {ex.Message}");
+            if (Transport == TransportKind.Usb)
+                Append("(USB needs native libusb — macOS: brew install libusb — and the OS must not already own the device)");
             Disconnect();
         }
     }
@@ -167,10 +221,14 @@ public partial class MonitorWindowViewModel : ObservableObject
             }
         }
         catch { /* ignore */ }
+        try { _usb?.Dispose(); } catch { /* ignore */ }
+
         _printer = null;
+        _usb = null;
         IsConnected = false;
         ConnectButtonText = "Connect";
         StatusText = "Not connected.";
+        Indicators.Clear();
         Append("Disconnected");
     }
 

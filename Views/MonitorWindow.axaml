@@ -24,10 +24,10 @@
         <!-- Connection -->
         <Border DockPanel.Dock="Top" Background="#3b3b3b" CornerRadius="6" Padding="12" Margin="0 0 0 10">
             <StackPanel>
-                <TextBlock Text="Connect to emulator" Foreground="White" FontWeight="Bold" Margin="0 0 0 8"/>
+                <TextBlock Text="Connect to emulator / printer" Foreground="White" FontWeight="Bold" Margin="0 0 0 8"/>
 
-                <ToggleSwitch IsChecked="{Binding UseSerial}" OnContent="Serial" OffContent="TCP/IP"
-                              Margin="0 0 0 6"/>
+                <ComboBox HorizontalAlignment="Stretch" Margin="0 0 0 6"
+                          ItemsSource="{Binding Transports}" SelectedItem="{Binding Transport}"/>
 
                 <!-- TCP fields -->
                 <Grid IsVisible="{Binding IsTcp}" ColumnDefinitions="*,Auto" ColumnSpacing="8">
@@ -36,12 +36,29 @@
                 </Grid>
 
                 <!-- Serial fields -->
-                <Grid IsVisible="{Binding UseSerial}" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <Grid IsVisible="{Binding IsSerial}" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                     <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
                               ItemsSource="{Binding AvailablePorts}" SelectedItem="{Binding SerialPortName}"/>
                     <Button Grid.Column="1" Content="⟳" Command="{Binding RefreshPortsCommand}" ToolTip.Tip="Refresh ports"/>
                     <TextBox Grid.Column="2" Width="80" Text="{Binding SerialBaud}" PlaceholderText="baud"/>
                 </Grid>
+
+                <!-- USB fields -->
+                <StackPanel IsVisible="{Binding IsUsb}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding AvailableUsbDevices}" SelectedItem="{Binding SelectedUsbDevice}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Display}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Grid.Column="1" Content="⟳" Command="{Binding RefreshUsbCommand}" ToolTip.Tip="Refresh USB devices"/>
+                    </Grid>
+                    <TextBlock Text="Direct USB (libusb) — send-only, no status. Needs libusb installed."
+                               Classes="label" TextWrapping="Wrap" Margin="0 4 0 0"/>
+                </StackPanel>
 
                 <Button Content="{Binding ConnectButtonText}" Command="{Binding ToggleConnectCommand}"
                         HorizontalAlignment="Stretch" Margin="0 8 0 0"/>

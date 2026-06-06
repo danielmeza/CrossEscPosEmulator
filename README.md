@@ -57,7 +57,8 @@ each `v*` tag.
 - [ZXing.Net](https://github.com/micjahn/ZXing.Net) (1D barcodes) ·
   [QRCoder](https://github.com/codebude/QRCoder) (QR codes) ·
   [System.IO.Ports](https://www.nuget.org/packages/System.IO.Ports) (serial)
-- [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET) (the Monitor test client)
+- [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET) (the Monitor test client) ·
+  [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) (direct USB printing)
 
 ### Supported commands
 
@@ -203,10 +204,17 @@ write to `COM4`.
 
 Sending test jobs is the **monitor's** job — the emulator is the device, the monitor is the POS-side
 client that drives it over the wire (just like a real application would). Click **Open monitor…** to
-launch a second window (built on [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) that connects
-back to the emulator over **TCP or a serial port** (toggle the transport; the serial path pairs with
-the emulator's serial transport via a virtual port bridge) and lets you exercise it without writing
-any code:
+launch a second window (built on [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) and pick a
+transport:
+
+- **TCP/IP** — connect to the emulator's listener (or any networked printer).
+- **Serial** — pick a port + baud; pairs with the emulator's serial transport via a virtual port bridge.
+- **USB** — print **directly to a real USB printer** selected from the connected-device list (by
+  VID:PID), via libusb. This is send-only (no status), and needs native **libusb** installed
+  (macOS `brew install libusb`, Debian/Ubuntu `apt install libusb-1.0-0`; bundled on Windows) and the
+  OS not already holding the device.
+
+It then lets you exercise the target without writing any code:
 
 - Print a sample receipt, all 1D barcodes, or QR / PDF417 / DataMatrix / Aztec.
 - Send the full feature test receipt, open the cash drawer, buzz, or cut.

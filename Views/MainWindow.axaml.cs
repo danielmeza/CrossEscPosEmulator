@@ -9,6 +9,7 @@ namespace ReceiptPrinterEmulator.Views;
 public partial class MainWindow : Window
 {
     private MainWindowViewModel? _viewModel;
+    private MonitorWindow? _monitorWindow;
 
     public MainWindow()
     {
@@ -24,12 +25,34 @@ public partial class MainWindow : Window
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_viewModel is not null)
+        {
             _viewModel.ReceiptsUpdated -= OnReceiptsUpdated;
+            _viewModel.OpenMonitorRequested -= OnOpenMonitorRequested;
+        }
 
         _viewModel = DataContext as MainWindowViewModel;
 
         if (_viewModel is not null)
+        {
             _viewModel.ReceiptsUpdated += OnReceiptsUpdated;
+            _viewModel.OpenMonitorRequested += OnOpenMonitorRequested;
+        }
+    }
+
+    private void OnOpenMonitorRequested(object? sender, EventArgs e)
+    {
+        if (_monitorWindow is not null)
+        {
+            _monitorWindow.Activate();
+            return;
+        }
+
+        _monitorWindow = new MonitorWindow
+        {
+            DataContext = new MonitorWindowViewModel(_viewModel?.CurrentTcpPort ?? 9100)
+        };
+        _monitorWindow.Closed += (_, _) => _monitorWindow = null;
+        _monitorWindow.Show();
     }
 
     private void OnReceiptsUpdated(object? sender, EventArgs e)

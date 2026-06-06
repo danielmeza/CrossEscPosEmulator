@@ -88,6 +88,15 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>Raised (on the UI thread) after receipts change, so the view can scroll to bottom.</summary>
     public event EventHandler? ReceiptsUpdated;
 
+    /// <summary>Raised when the user asks to open the Monitor window (handled by the view).</summary>
+    public event EventHandler? OpenMonitorRequested;
+
+    /// <summary>The TCP port the monitor should connect to (the current listener port).</summary>
+    public int CurrentTcpPort => int.TryParse(TcpPortText, out var p) ? p : 9100;
+
+    [RelayCommand]
+    private void OpenMonitor() => OpenMonitorRequested?.Invoke(this, EventArgs.Empty);
+
     public MainWindowViewModel(ReceiptPrinter printer, INotificationService notifications,
         IFileDialogService dialogs, string listenAddress = "0.0.0.0", int tcpPort = 9100,
         bool tcpEnabled = true, string? serialPort = null, int serialBaud = 9600)

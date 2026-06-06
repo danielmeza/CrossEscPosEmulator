@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using LibUsbDotNet.LibUsb;
 using LibUsbDotNet.Main;
 
@@ -31,6 +33,51 @@ public sealed class UsbBulkTransport : IDisposable
         _context = context;
         _device = device;
         _writer = writer;
+    }
+
+    static UsbBulkTransport()
+    {
+        // .NET's default loader doesn't search Homebrew/manual install paths, so an installed libusb
+        // can still fail to load. Map LibUsbDotNet's "libusb-1.0" P/Invokes to the real dylib/so.
+        try
+        {
+            NativeLibrary.SetDllImportResolver(typeof(UsbContext).Assembly, ResolveLibusb);
+        }
+        catch { /* resolver already set, or unsupported — fall back to default resolution */ }
+    }
+
+    private static IntPtr ResolveLibusb(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
+    {
+        if (libraryName.IndexOf("usb", StringComparison.OrdinalIgnoreCase) < 0)
+            return IntPtr.Zero; // not ours — let the runtime handle it
+
+        // Prefer a copy shipped next to the executable, then well-known system locations.
+        var local = System.IO.Path.Combine(AppContext.BaseDirectory,
+            OperatingSystem.IsMacOS() ? "libusb-1.0.0.dylib"
+            : OperatingSystem.IsLinux() ? "libusb-1.0.so.0"
+            : "libusb-1.0.dll");
+        if (NativeLibrary.TryLoad(local, out var localHandle))
+            return localHandle;
+
+        string[] candidates =
+            OperatingSystem.IsMacOS()
+                ? new[]
+                {
+                    "/opt/homebrew/lib/libusb-1.0.0.dylib",
+                    "/opt/homebrew/opt/libusb/lib/libusb-1.0.0.dylib",
+                    "/usr/local/lib/libusb-1.0.0.dylib",
+                    "/usr/local/opt/libusb/lib/libusb-1.0.0.dylib",
+                    "libusb-1.0.0.dylib",
+                }
+                : OperatingSystem.IsLinux()
+                    ? new[] { "libusb-1.0.so.0", "libusb-1.0.so", "/usr/lib/x86_64-linux-gnu/libusb-1.0.so.0" }
+                    : new[] { "libusb-1.0.dll" };
+
+        foreach (var candidate in candidates)
+            if (NativeLibrary.TryLoad(candidate, out var handle))
+                return handle;
+
+        return IntPtr.Zero; // none found — default resolution will surface the "not found" error
     }
 
     /// <summary>Enumerates connected USB devices (vendor/product ids).</summary>

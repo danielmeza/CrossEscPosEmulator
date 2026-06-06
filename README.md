@@ -212,6 +212,13 @@ back to the emulator over TCP and lets you exercise it without writing any code:
   Back), confirming the emulator's status responses are wire-correct. When the printer isn't ready,
   the emulator drops the job and shows a notification, just like real hardware.
 
+![Monitor](docs/Monitor.png)
+
+Toggling the emulator's **Printer state** panel pushes status to the monitor in real time — here the
+printer reports *paper low* and a *recoverable error*, so the monitor shows **Not ready**:
+
+![Monitor reflecting printer state](docs/Monitor%20Invalid%20State.png)
+
 ### Exporting tickets
 
 Each cut (`ESC i` / `ESC m` / `GS V`) starts a new receipt — a "page". The **Export** buttons in the

@@ -46,8 +46,7 @@ public partial class MonitorWindowViewModel : ObservableObject
     private const int DefaultModuleSize = 5; // dots per module for 2D symbols
 
     private readonly EPSON _e = new();
-    private BasePrinter? _printer;       // TCP / serial (ESC-POS-.NET)
-    private UsbBulkTransport? _usb;      // direct USB (libusb), send-only
+    private BasePrinter? _printer;       // TCP / serial / USB (all ESC-POS-.NET BasePrinters)
 
     [ObservableProperty] private TransportKind _transport = TransportKind.Tcp;
     [ObservableProperty] private string _host = "127.0.0.1";
@@ -116,7 +115,7 @@ public partial class MonitorWindowViewModel : ObservableObject
         AvailableUsbDevices.Clear();
         try
         {
-            foreach (var d in UsbBulkTransport.List())
+            foreach (var d in UsbPrinter.ListDevices())
                 AvailableUsbDevices.Add(d);
         }
         catch (Exception ex)
@@ -161,11 +160,8 @@ public partial class MonitorWindowViewModel : ObservableObject
         var data = ByteSplicer.Combine(parts);
         try
         {
-            if (_usb is not null)
-                await Task.Run(() => _usb.Write(data));
-            else if (_printer is not null)
-                await Task.Run(() => _printer.Write(data));
-            else { Append("Not connected."); return; }
+            if (_printer is null) { Append("Not connected."); return; }
+            await Task.Run(() => _printer.Write(data));
             Append($"→ {label}");
         }
         catch (Exception ex)
@@ -188,10 +184,10 @@ public partial class MonitorWindowViewModel : ObservableObject
             {
                 case TransportKind.Usb:
                     if (SelectedUsbDevice is null) { Append("No USB device selected."); return; }
-                    _usb = UsbBulkTransport.Open(SelectedUsbDevice.Vid, SelectedUsbDevice.Pid);
+                    // A USB printer is just another BasePrinter: writes go out the bulk-OUT endpoint
+                    // and status comes back on bulk-IN, so it joins the shared status pipeline below.
+                    _printer = new UsbPrinter(SelectedUsbDevice.Vid, SelectedUsbDevice.Pid);
                     target = SelectedUsbDevice.Display;
-                    Indicators.Clear();
-                    StatusText = "Connected to USB (send-only — no status reported).";
                     break;
 
                 case TransportKind.Serial:
@@ -245,10 +241,8 @@ public partial class MonitorWindowViewModel : ObservableObject
             }
         }
         catch { /* ignore */ }
-        try { _usb?.Dispose(); } catch { /* ignore */ }
 
         _printer = null;
-        _usb = null;
         IsConnected = false;
         ConnectButtonText = "Connect";
         StatusText = "Not connected.";

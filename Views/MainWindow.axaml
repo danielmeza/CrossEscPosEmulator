@@ -70,7 +70,6 @@
                     <!-- Actions -->
                     <TextBlock Classes="section" Text="Actions"/>
                     <Button Command="{Binding ResetCommand}" Content="Reset"/>
-                    <Button Command="{Binding TestPrintCommand}" Content="Test print"/>
                     <Button Command="{Binding HexDumpCommand}" Content="Hex Dump Test Ticket"/>
                     <Button Command="{Binding OpenMonitorCommand}" Content="Open monitor…"/>
 

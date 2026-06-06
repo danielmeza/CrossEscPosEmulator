@@ -97,6 +97,10 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenMonitor() => OpenMonitorRequested?.Invoke(this, EventArgs.Empty);
 
+    // Single re-armable timer for the toast so overlapping notifications don't cut each other short.
+    private static readonly TimeSpan ToastDuration = TimeSpan.FromSeconds(3.5);
+    private readonly DispatcherTimer _toastTimer;
+
     public MainWindowViewModel(ReceiptPrinter printer, INotificationService notifications,
         IFileDialogService dialogs, string listenAddress = "0.0.0.0", int tcpPort = 9100,
         bool tcpEnabled = true, string? serialPort = null, int serialBaud = 9600)
@@ -106,6 +110,9 @@ public partial class MainWindowViewModel : ObservableObject
         _dialogs = dialogs;
         _tcp = new NetServer(printer);
         _serial = new SerialServer(printer);
+
+        _toastTimer = new DispatcherTimer { Interval = ToastDuration };
+        _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); ToastVisible = false; };
 
         // Events fire from a transport receive thread — marshal everything to the UI thread.
         _printer.OnActivityEvent += (_, _) => Dispatcher.UIThread.Post(() =>
@@ -271,17 +278,8 @@ public partial class MainWindowViewModel : ObservableObject
         RefreshReceipts();
     }
 
-    [RelayCommand]
-    private void TestPrint()
-    {
-        if (!File.Exists(TestReceiptPath))
-            return;
-
-        // Read as raw bytes (the file contains binary ESC/POS incl. barcode/QR), decoded the same
-        // way as the network/serial path so byte values >127 survive.
-        var bytes = File.ReadAllBytes(TestReceiptPath);
-        _printer.FeedEscPos(Encoding.Latin1.GetString(bytes));
-    }
+    // Note: sending test prints is the Monitor window's responsibility (it drives the emulator over
+    // the wire, like a real POS client). The emulator no longer injects test content into itself.
 
     [RelayCommand]
     private void HexDump()
@@ -372,8 +370,10 @@ public partial class MainWindowViewModel : ObservableObject
     {
         ToastMessage = message;
         ToastVisible = true;
-        // Auto-hide after a moment (must run on the UI thread; callers already are).
-        DispatcherTimer.RunOnce(() => ToastVisible = false, TimeSpan.FromMilliseconds(1800));
+        // Restart the timer so the most recent toast always shows for the full duration
+        // (overlapping notifications no longer cut each other short).
+        _toastTimer.Stop();
+        _toastTimer.Start();
     }
 
     private void UpdateStatus()

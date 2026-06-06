@@ -181,6 +181,7 @@ public class ReceiptPrinter
         }
 
         _currentResponder = responder;
+        _blockedNotified = false; // re-arm per received job so every blocked job notifies once
         try
         {
             Logger.Info($"Received: {ascii}");

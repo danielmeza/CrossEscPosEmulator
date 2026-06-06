@@ -93,6 +93,15 @@ public class EscPosInterpreter
         RegisterCommand(new SetMotionUnitsCommand());     // GS P x y
         RegisterCommand(new DefineDownloadBitImageCommand()); // GS * x y ...
         RegisterCommand(new PrintDownloadBitImageCommand());  // GS / m
+
+        // Page mode
+        RegisterCommand(new SelectPageModeCommand());      // ESC L
+        RegisterCommand(new SelectStandardModeCommand());  // ESC S
+        RegisterCommand(new Commands.FixedArgNoOpCommand(EscPosInterpreter.ESC + "W", 8, "ESC W set print area"));
+        RegisterCommand(new Commands.FixedArgNoOpCommand(EscPosInterpreter.ESC + "T", 1, "ESC T print direction"));
+        RegisterCommand(new Commands.FixedArgNoOpCommand(EscPosInterpreter.ESC + "$", 2, "ESC $ absolute position"));
+        RegisterCommand(new Commands.FixedArgNoOpCommand(EscPosInterpreter.GS + "$", 2, "GS $ absolute vertical"));
+        RegisterCommand(new Commands.FixedArgNoOpCommand(EscPosInterpreter.GS + "\\", 2, "GS \\ relative vertical"));
         RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(E", "GS ( E user setup"));
         RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(K", "GS ( K print control"));
         RegisterCommand(new Commands.NoOpParenCommand(EscPosInterpreter.GS + "(H", "GS ( H response request"));
@@ -289,8 +298,9 @@ public class EscPosInterpreter
 
             if (currentChar == FF)
             {
-                // Print and return to Standard mode (in Page mode)
-                //throw new NotImplementedException("Not supported: page mode");
+                // In page mode: print the buffered page and return to standard mode.
+                _printer.PrintText(FinalizePrintBuffer());
+                _printer.PrintPage();
                 continue;
             }
 

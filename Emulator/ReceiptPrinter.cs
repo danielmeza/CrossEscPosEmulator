@@ -400,8 +400,65 @@ public class ReceiptPrinter
         });
     }
 
-    /// <summary>CAN — cancel print data in the current page-mode area (wired in page mode).</summary>
-    public void CancelPageData() => Logger.Info("CAN: cancel page data");
+    #endregion
+
+    #region Page mode
+
+    private bool _pageMode;
+    private Receipt? _standardReceipt; // the standard-mode receipt, parked while in page mode
+
+    public bool IsPageMode => _pageMode;
+
+    /// <summary>
+    /// ESC L — enter page mode. Output is buffered into an off-stack receipt and flushed as one image
+    /// by FF (PrintPage). This is an approximation: content is buffered then rasterized, rather than
+    /// positioned with the full page-mode coordinate system.
+    /// </summary>
+    public void EnterPageMode()
+    {
+        if (_pageMode) return;
+        Logger.Info("Enter page mode");
+        _standardReceipt = CurrentReceipt;
+        CurrentReceipt = new Receipt(_paperConfiguration, _printMode, _lineSpacing); // not added to the stack
+        _pageMode = true;
+    }
+
+    /// <summary>ESC S — return to standard mode, discarding any buffered page data.</summary>
+    public void SelectStandardMode()
+    {
+        if (!_pageMode) return;
+        Logger.Info("Select standard mode");
+        RestoreStandard();
+    }
+
+    /// <summary>FF — in page mode, rasterize the page buffer onto the receipt and return to standard mode.</summary>
+    public void PrintPage()
+    {
+        if (!_pageMode) return;
+        Logger.Info("Print page (FF)");
+        var page = CurrentReceipt;
+        RestoreStandard();
+        if (!page.IsEmpty)
+        {
+            using var bmp = page.Render();
+            CurrentReceipt.PrintBitmap(bmp.Copy());
+        }
+    }
+
+    /// <summary>CAN — cancel the buffered page data and return to standard mode.</summary>
+    public void CancelPageData()
+    {
+        if (!_pageMode) { Logger.Info("CAN (not in page mode)"); return; }
+        Logger.Info("Cancel page data");
+        RestoreStandard();
+    }
+
+    private void RestoreStandard()
+    {
+        CurrentReceipt = _standardReceipt!;
+        _standardReceipt = null;
+        _pageMode = false;
+    }
 
     #endregion
 

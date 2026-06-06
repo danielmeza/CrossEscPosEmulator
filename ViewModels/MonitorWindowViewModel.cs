@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using ESCPOS_NET;
 using ESCPOS_NET.Emitters;
 using ESCPOS_NET.Utilities;
+using ReceiptPrinterEmulator.Emulator.Rendering;
 
 namespace ReceiptPrinterEmulator.ViewModels;
 
@@ -35,6 +36,9 @@ public sealed class StatusIndicator
 /// </summary>
 public partial class MonitorWindowViewModel : ObservableObject
 {
+    private const byte Bel = 0x07;          // bell / buzzer control code
+    private const int DefaultModuleSize = 5; // dots per module for 2D symbols
+
     private readonly EPSON _e = new();
     private NetworkPrinter? _printer;
 
@@ -210,23 +214,27 @@ public partial class MonitorWindowViewModel : ObservableObject
         // DataMatrix / Aztec aren't in the ESC-POS-.NET emitter, so send the raw GS ( k bytes —
         // the emulator supports them (cn=54 / cn=55).
         _e.PrintLine("DataMatrix"),
-        Raw2D(54, "DataMatrix from monitor", 5),
+        Raw2D(TwoDimensionCode.DataMatrix, "DataMatrix from monitor", DefaultModuleSize),
         _e.PrintLine("Aztec"),
-        Raw2D(55, "Aztec from monitor", 5),
+        Raw2D(TwoDimensionCode.Aztec, "Aztec from monitor", DefaultModuleSize),
         _e.FeedLines(1),
         _e.PartialCut());
 
     /// <summary>Builds raw GS ( k bytes for a 2D symbol the emitter doesn't expose (DataMatrix/Aztec).</summary>
     private static byte[] Raw2D(int cn, string data, int moduleSize)
     {
+        const int GS = 0x1D, ParenK0 = '(', ParenK1 = 'k';
+        const int FnModuleSize = 67, FnStore = 80, FnPrint = 81, StoreM = 48;
+        const int HeaderLen = 3; // cn + fn + m
+
         var b = new List<byte>();
         void By(params int[] xs) { foreach (var x in xs) b.Add((byte)x); }
-        const int GS = 0x1D;
-        By(GS, '(', 'k', 3, 0, cn, 67, moduleSize);                      // module size
-        int len = 3 + data.Length;
-        By(GS, '(', 'k', len & 0xFF, len >> 8, cn, 80, 48);             // store
+
+        By(GS, ParenK0, ParenK1, HeaderLen, 0, cn, FnModuleSize, moduleSize);
+        int len = HeaderLen + data.Length;
+        By(GS, ParenK0, ParenK1, len & 0xFF, len >> 8, cn, FnStore, StoreM);
         b.AddRange(System.Text.Encoding.ASCII.GetBytes(data));
-        By(GS, '(', 'k', 3, 0, cn, 81, 48);                             // print
+        By(GS, ParenK0, ParenK1, HeaderLen, 0, cn, FnPrint, StoreM);
         return b.ToArray();
     }
 
@@ -234,7 +242,7 @@ public partial class MonitorWindowViewModel : ObservableObject
     private async Task OpenDrawer() => await Send("open cash drawer", _e.CashDrawerOpenPin2());
 
     [RelayCommand]
-    private async Task Beep() => await Send("buzzer (BEL)", new byte[] { 0x07 });
+    private async Task Beep() => await Send("buzzer (BEL)", [Bel]);
 
     [RelayCommand]
     private async Task Cut() => await Send("cut", _e.PartialCut());

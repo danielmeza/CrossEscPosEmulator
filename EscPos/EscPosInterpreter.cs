@@ -155,26 +155,34 @@ public class EscPosInterpreter
     /// Dispatches a real-time DLE command once enough bytes have accumulated. Returns true when the
     /// command is complete (or unsupported and abandoned), false when more bytes are needed.
     /// </summary>
+    // DLE real-time sub-commands (the byte following DLE) and their argument layout.
+    private const int RtEot = 0x04;          // transmit real-time status
+    private const int RtEnq = 0x05;          // real-time request / recover
+    private const int RtDc4 = 0x14;          // real-time request (DC4)
+    private const int RtDc4GeneratePulse = 0x01; // DLE DC4 fn=1: cash-drawer pulse
+    private const int RtEotLength = 2;       // EOT + n
+    private const int RtDc4PulseLength = 4;  // DC4 + fn + m + t
+
     private bool TryDispatchRealtime()
     {
         int first = _realtimeBuffer[0];
         switch (first)
         {
-            case 0x04: // DLE EOT n — real-time status
-                if (_realtimeBuffer.Count < 2) return false;
+            case RtEot: // DLE EOT n — real-time status
+                if (_realtimeBuffer.Count < RtEotLength) return false;
                 _printer.TransmitRealtimeStatus(_realtimeBuffer[1]);
                 return true;
 
-            case 0x05: // DLE ENQ — real-time recover
+            case RtEnq: // DLE ENQ — real-time recover
                 _printer.RealtimeRecover();
                 return true;
 
-            case 0x14: // DLE DC4 fn ... — real-time request
+            case RtDc4: // DLE DC4 fn ... — real-time request
                 if (_realtimeBuffer.Count < 2) return false;
                 int fn = _realtimeBuffer[1];
-                if (fn == 0x01) // generate pulse (cash drawer): DLE DC4 1 m t
+                if (fn == RtDc4GeneratePulse) // generate pulse (cash drawer): DLE DC4 1 m t
                 {
-                    if (_realtimeBuffer.Count < 4) return false;
+                    if (_realtimeBuffer.Count < RtDc4PulseLength) return false;
                     _printer.KickCashDrawer(_realtimeBuffer[2]);
                     return true;
                 }

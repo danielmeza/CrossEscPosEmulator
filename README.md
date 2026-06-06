@@ -200,15 +200,17 @@ write to `COM4`.
 
 ### Monitor (built-in test client)
 
-Click **Open monitor…** to launch a second window — a POS-side client (built on
-[ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) that connects back to the emulator over TCP
-and lets you exercise it without writing any code:
+Sending test jobs is the **monitor's** job — the emulator is the device, the monitor is the POS-side
+client that drives it over the wire (just like a real application would). Click **Open monitor…** to
+launch a second window (built on [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) that connects
+back to the emulator over TCP and lets you exercise it without writing any code:
 
 - Print a sample receipt, all 1D barcodes, or QR / PDF417 / DataMatrix / Aztec.
 - Send the full feature test receipt, open the cash drawer, buzz, or cut.
 - Watch the **printer status** the emulator reports back: toggle paper-out / cover / drawer / offline
   in the **Printer state** panel and the monitor's status display updates live (via Automatic Status
-  Back), confirming the emulator's status responses are wire-correct.
+  Back), confirming the emulator's status responses are wire-correct. When the printer isn't ready,
+  the emulator drops the job and shows a notification, just like real hardware.
 
 ### Exporting tickets
 

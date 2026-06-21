@@ -35,6 +35,10 @@ document.querySelector('img').src = url;   // URL.revokeObjectURL(url) when done
 
 The runtime boots lazily on the first call and is reused after that.
 
+**TypeScript.** Type definitions ship alongside the wrapper
+([`crossescpos.d.ts`](../../src/CrossEscPos.Wasm/wwwroot/crossescpos.d.ts)) — copy it next to
+`crossescpos.js` and imports are fully typed (`Uint8Array` in, `Promise<Uint8Array | Blob | string | number>` out).
+
 ## Building the module
 
 The module needs the **wasm-tools workload** (it links SkiaSharp's native `libSkiaSharp.a` into the

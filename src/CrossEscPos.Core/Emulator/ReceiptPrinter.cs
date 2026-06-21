@@ -501,21 +501,9 @@ public class ReceiptPrinter
     /// <summary>Transmits a printer info / ID response (GS I n).</summary>
     public void TransmitPrinterId(int n)
     {
-        switch (n)
-        {
-            case 1 or 49: SendResponse(0x02); break;             // printer model ID
-            case 2 or 50: SendResponse(0x00); break;             // type ID
-            case 3 or 51: SendResponse(0x01); break;             // ROM version ID
-            default:
-                // Info B responses (firmware/maker/model name): 0x5F <text> 0x00
-                var name = n switch { 65 => "1.0", 66 => "CrossEscPos", 67 => "EMU-80", _ => "EMU" };
-                var bytes = new List<byte> { 0x5F };
-                bytes.AddRange(Encoding.ASCII.GetBytes(name));
-                bytes.Add(0x00);
-                SendResponse(bytes.ToArray());
-                break;
-        }
-        Logger.Info($"GS I {n}");
+        var request = PrinterIdRequest.FromParameter(n);
+        SendResponse(request.Response);
+        Logger.Info($"GS I {n} ({request.Name})");
     }
 
     /// <summary>Real-time request to recover (DLE ENQ) — clears recoverable error.</summary>

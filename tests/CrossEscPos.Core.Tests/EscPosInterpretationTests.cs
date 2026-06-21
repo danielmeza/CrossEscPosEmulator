@@ -333,4 +333,12 @@ public class EscPosInterpretationTests
         _printer.FeedEscPos("x" + Bytes(LF));
         Assert.Equal(1, activity);
     }
+
+    [Fact]
+    public void FeedEscPos_ByteArray_RendersSameAsString()
+    {
+        byte[] data = System.Text.Encoding.Latin1.GetBytes("Bytes" + Bytes(LF));
+        _printer.FeedEscPos(data); // the byte[] overload — ESC/POS is binary
+        Assert.Contains("Bytes", RenderReceipt().DrawnText);
+    }
 }

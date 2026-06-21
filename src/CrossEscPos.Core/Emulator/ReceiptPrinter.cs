@@ -180,6 +180,21 @@ public class ReceiptPrinter
     public static bool DebugDumpEnabled { get; set; } =
         Environment.GetEnvironmentVariable("ESCPOS_DEBUG_DUMP") is "1" or "true";
 
+    /// <summary>
+    /// Feeds a raw ESC/POS byte stream — the natural form, since ESC/POS is binary. Each byte maps 1:1
+    /// to the interpreter's chars (Latin1), so this is equivalent to the string overload.
+    /// </summary>
+    public void FeedEscPos(byte[] data, IPrinterResponder? responder = null)
+        => FeedEscPos(Encoding.Latin1.GetString(data), responder);
+
+    /// <inheritdoc cref="FeedEscPos(byte[], IPrinterResponder?)"/>
+    public void FeedEscPos(ReadOnlySpan<byte> data, IPrinterResponder? responder = null)
+        => FeedEscPos(Encoding.Latin1.GetString(data), responder);
+
+    /// <summary>
+    /// Feeds ESC/POS where each char is one byte (Latin1). Prefer the <c>byte[]</c> overload for raw
+    /// device input; this overload is convenient when the payload is already a string.
+    /// </summary>
     public void FeedEscPos(string ascii, IPrinterResponder? responder = null)
     {
         if (DebugDumpEnabled)

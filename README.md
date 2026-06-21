@@ -261,7 +261,7 @@ The host (desktop, browser, or your own app) is the composition root: it picks a
 var imageFactory = new SkiaImageFactory();
 var typefaces    = new SkiaTypefaceProvider();
 var printer      = new ReceiptPrinter(PaperConfiguration.Default, imageFactory, typefaces);
-printer.FeedEscPos(escPosBytesAsLatin1String);
+printer.FeedEscPos(escPosBytes);                         // byte[] — ESC/POS is binary
 using var image  = printer.CurrentReceipt.Render();      // IReceiptImage
 new SkiaImageEncoder().EncodePng(image, outputStream);
 ```

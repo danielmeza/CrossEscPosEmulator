@@ -42,8 +42,8 @@ internal static class Program
 
         var printer = new ReceiptPrinter(PaperConfiguration.Default, imageFactory, typefaces);
 
-        // The interpreter consumes one char per byte (Latin1), matching the transports.
-        printer.FeedEscPos(Encoding.Latin1.GetString(bytes));
+        // ESC/POS is binary — feed the raw bytes straight in.
+        printer.FeedEscPos(bytes);
 
         // Render every non-empty receipt the stream produced and stack them.
         var pages = new List<IReceiptImage>();

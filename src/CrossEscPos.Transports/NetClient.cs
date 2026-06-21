@@ -90,5 +90,5 @@ public class NetClient : IPrinterResponder
     }
 
     private void HandleIncomingData(ReadOnlySpan<byte> data) =>
-        _printer.FeedEscPos(Encoding.Latin1.GetString(data), this);
+        _printer.FeedEscPos(data, this);
 }

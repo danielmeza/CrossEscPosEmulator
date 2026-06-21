@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Reflection;
-using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CrossEscPos.Graphics;
@@ -62,6 +61,16 @@ public partial class BrowserMainViewModel : ObservableObject
         Refresh();
     }
 
+    private static byte[] LoadSample()
+    {
+        using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("sample.escpos");
+        if (stream is null)
+            return System.Array.Empty<byte>();
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        return buffer.ToArray();
+    }
+
     [RelayCommand]
     private void Clear()
     {
@@ -88,14 +97,4 @@ public partial class BrowserMainViewModel : ObservableObject
         }
     }
 
-    private static string LoadSample()
-    {
-        using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("sample.escpos");
-        if (stream is null)
-            return string.Empty;
-        using var buffer = new MemoryStream();
-        stream.CopyTo(buffer);
-        // The interpreter consumes one char per byte (Latin1), matching the transports.
-        return Encoding.Latin1.GetString(buffer.ToArray());
-    }
 }

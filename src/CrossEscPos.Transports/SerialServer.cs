@@ -119,7 +119,7 @@ public class SerialServer : IPrinterResponder
 
                 Logger.Info($"Received serial data (byteCount={read}, port={PortName})");
 
-                _printer.FeedEscPos(Encoding.Latin1.GetString(buffer, 0, read), this);
+                _printer.FeedEscPos(buffer.AsSpan(0, read), this);
             }
         }
         catch (OperationCanceledException)

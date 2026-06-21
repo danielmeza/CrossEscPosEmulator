@@ -57,6 +57,7 @@ it. That's the whole design: the emulation is portable (headless, server, WASM);
 - **[Rendering](rendering.md)** — the Skia backend, exporting PNGs, and writing your own backend.
 - **[Controls](controls.md)** — hosting `ReceiptView` and `PrinterStatePanel` in an Avalonia app.
 - **[Transports](transports.md)** — driving the emulator over TCP, serial, or USB.
+- **[WASM JS interop](wasm-interop.md)** — render ESC/POS to PNG from any JavaScript project (no .NET).
 
 ## Installing
 

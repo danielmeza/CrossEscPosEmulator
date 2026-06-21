@@ -267,7 +267,9 @@ new SkiaImageEncoder().EncodePng(image, outputStream);
 ```
 
 📦 **Package usage guides:** [`docs/packages/`](docs/packages/README.md) — getting started, the core
-emulator, rendering & custom backends, the Avalonia controls, and the transports.
+emulator, rendering & custom backends, the Avalonia controls, the transports, and a
+[**WASM JavaScript interop**](docs/packages/wasm-interop.md) for rendering ESC/POS to PNG from any web
+project (no .NET on the caller's side).
 
 ### Building & running
 

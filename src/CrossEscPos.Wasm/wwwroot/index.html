@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CrossEscPos — WASM render (JS interop)</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 2rem; background: #262626; color: #eee; }
+        h1 { font-size: 1.2rem; }
+        textarea { width: 100%; height: 8rem; font-family: monospace; }
+        button { padding: .5rem 1rem; margin: .5rem .5rem 0 0; }
+        #out { background: #fff; display: inline-block; margin-top: 1rem; }
+        #status { color: #aaa; }
+    </style>
+</head>
+<body>
+    <h1>CrossEscPos — render ESC/POS to PNG, in the browser, from plain JavaScript</h1>
+    <p id="status">Loading .NET runtime…</p>
+
+    <textarea id="input">Hello from JavaScript!
+ESC/POS rendered in WASM.
+</textarea>
+    <div>
+        <button id="render">Render text</button>
+        <button id="sample">Render sample ticket</button>
+    </div>
+
+    <div><img id="out" alt="rendered receipt" /></div>
+
+    <script type="module" src="./demo.js"></script>
+</body>
+</html>

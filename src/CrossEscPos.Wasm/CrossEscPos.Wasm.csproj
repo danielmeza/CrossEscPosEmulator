@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-browser</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- SkiaSharp's WebAssembly native (libSkiaSharp.a) is a static lib that must be linked into the
+         runtime, so the native wasm build step is required. -->
+    <WasmBuildNative>true</WasmBuildNative>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Headless render module: Core + the Skia backend. No Avalonia, no transports — just
+         ESC/POS bytes -> PNG, callable from JavaScript via [JSExport]. -->
+    <ProjectReference Include="..\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Core\CrossEscPos.Core.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Rendering.Skia\CrossEscPos.Rendering.Skia.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="3.119.4" />
+  </ItemGroup>
+
+</Project>

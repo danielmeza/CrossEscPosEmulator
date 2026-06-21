@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "CrossEscPos.Wasm": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5220",
+      "environmentVariables": { "ASPNETCORE_ENVIRONMENT": "Development" }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:CrossEscPos.Controls"
+             x:Class="CrossEscPos.Controls.ReceiptView">
+
+    <!-- Renders the live stream of receipts (one image per cut) with a per-page export toolbar.
+         Bind the Receipts property to an IEnumerable of ReceiptViewModel. -->
+    <ScrollViewer Name="ReceiptScrollView"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Visible">
+        <ItemsControl Margin="0 12 0 0"
+                      ItemsSource="{Binding Receipts, RelativeSource={RelativeSource AncestorType=controls:ReceiptView}}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="controls:ReceiptViewModel">
+                    <Border Background="White" CornerRadius="4"
+                            Margin="0 0 0 16" HorizontalAlignment="Center"
+                            BoxShadow="0 2 10 0 #50000000">
+                        <StackPanel>
+                            <Image Source="{Binding Image}" Stretch="None"/>
+                            <!-- Page toolbar (below the receipt, after the cut) -->
+                            <Border Background="#3b3b3b" CornerRadius="0 0 4 4">
+                                <Grid ColumnDefinitions="*,Auto" Margin="10 4">
+                                    <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                               Foreground="White" FontSize="12"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Command="{Binding ExportCommand}"
+                                            Content="↓ PNG" Padding="8 2" FontSize="12"
+                                            ToolTip.Tip="Export this page as PNG"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </ScrollViewer>
+</UserControl>

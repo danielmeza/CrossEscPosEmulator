@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>SkiaSharp implementation of the CrossEscPos rendering abstraction (canvas, image,
+      image factory, typeface provider and PNG encoder). The default render backend; works on desktop
+      and in the browser (Avalonia ships the SkiaSharp WASM natives). Fonts are embedded.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pinned to match Avalonia.Skia 12.0.4's SkiaSharp dependency (avoids native lib conflicts). -->
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <!-- Base SkiaSharp ships Windows/macOS natives; Linux must be added so server/headless use works. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Embedded monospace font (JetBrains Mono, OFL) loaded via SKTypeface.FromStream — no file IO,
+         so the package is self-contained and works in the browser sandbox. Explicit LogicalName keeps
+         the manifest resource names stable (no path/hyphen munging). -->
+    <EmbeddedResource Include="Assets\Fonts\receipt-mono.ttf"            LogicalName="receipt-mono.ttf" />
+    <EmbeddedResource Include="Assets\Fonts\receipt-mono-bold.ttf"       LogicalName="receipt-mono-bold.ttf" />
+    <EmbeddedResource Include="Assets\Fonts\receipt-mono-italic.ttf"     LogicalName="receipt-mono-italic.ttf" />
+    <EmbeddedResource Include="Assets\Fonts\receipt-mono-bolditalic.ttf" LogicalName="receipt-mono-bolditalic.ttf" />
+  </ItemGroup>
+
+</Project>

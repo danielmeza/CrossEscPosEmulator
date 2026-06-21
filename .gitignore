@@ -10,3 +10,6 @@ riderModule.iml
 last_escpos_receive.txt
 last_ticket.bin
 last_*.txt
+
+# macOS
+.DS_Store

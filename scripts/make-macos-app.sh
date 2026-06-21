@@ -10,10 +10,12 @@ set -euo pipefail
 PUBLISH_DIR=${1:?publish dir required}
 OUTPUT_DIR=${2:?output dir required}
 VERSION=${3:-1.0.0}
-ICON_PNG=${4:-Assets/Icon/icon.png}
-EXE_NAME=ReceiptPrinterEmulator
+ICON_PNG=${4:-src/CrossEscPos.App.Desktop/Assets/Icon/icon.png}
+# The published executable (AssemblyName) vs the visible bundle name.
+EXE_NAME=CrossEscPos.App.Desktop
+APP_NAME=CrossEscPos
 
-APP="$OUTPUT_DIR/$EXE_NAME.app"
+APP="$OUTPUT_DIR/$APP_NAME.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 

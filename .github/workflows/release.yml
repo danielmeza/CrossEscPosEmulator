@@ -1,7 +1,8 @@
 name: Release
 
-# Builds self-contained apps for Windows, Linux and macOS and publishes them to a GitHub Release.
-# Trigger by pushing a tag like `v1.2.3`, or run manually (workflow_dispatch) to just build artifacts.
+# Builds self-contained desktop apps for Windows, Linux and macOS, packs the NuGet libraries, and
+# publishes everything to a GitHub Release. Trigger by pushing a tag like `v1.2.3`, or run manually
+# (workflow_dispatch) to just build artifacts.
 
 on:
   push:
@@ -40,7 +41,7 @@ jobs:
 
       - name: Publish (self-contained)
         run: >
-          dotnet publish ReceiptPrinterEmulator.csproj
+          dotnet publish src/CrossEscPos.App.Desktop/CrossEscPos.App.Desktop.csproj
           -c Release
           -r ${{ matrix.rid }}
           --self-contained true
@@ -52,30 +53,61 @@ jobs:
         if: matrix.kind == 'zip'
         run: |
           cd publish/${{ matrix.rid }}
-          zip -r ../../ReceiptPrinterEmulator-${{ matrix.rid }}.zip .
+          zip -r ../../CrossEscPos-${{ matrix.rid }}.zip .
 
       - name: Package — tar.gz (Linux)
         if: matrix.kind == 'targz'
-        run: tar -czf ReceiptPrinterEmulator-${{ matrix.rid }}.tar.gz -C publish/${{ matrix.rid }} .
+        run: tar -czf CrossEscPos-${{ matrix.rid }}.tar.gz -C publish/${{ matrix.rid }} .
 
       - name: Package — .app bundle (macOS)
         if: matrix.kind == 'app'
         run: |
           chmod +x scripts/make-macos-app.sh
           scripts/make-macos-app.sh publish/${{ matrix.rid }} dist "${{ steps.ver.outputs.version }}"
-          ditto -c -k --keepParent dist/ReceiptPrinterEmulator.app ReceiptPrinterEmulator-${{ matrix.rid }}.zip
+          ditto -c -k --keepParent dist/CrossEscPos.app CrossEscPos-${{ matrix.rid }}.zip
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.rid }}
           path: |
-            ReceiptPrinterEmulator-${{ matrix.rid }}.zip
-            ReceiptPrinterEmulator-${{ matrix.rid }}.tar.gz
+            CrossEscPos-${{ matrix.rid }}.zip
+            CrossEscPos-${{ matrix.rid }}.tar.gz
           if-no-files-found: ignore
+
+  pack:
+    name: Pack NuGet libraries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Determine version
+        id: ver
+        shell: bash
+        run: |
+          VER=1.0.0
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then VER="${GITHUB_REF_NAME#v}"; fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      # The packable libraries don't need the browser head, so pack each individually (no wasm workload).
+      - name: Pack
+        shell: bash
+        run: |
+          for proj in Abstractions Core Rendering.Skia Transports Controls; do
+            dotnet pack "src/CrossEscPos.$proj/CrossEscPos.$proj.csproj" \
+              -c Release -p:Version=${{ steps.ver.outputs.version }} -o packages
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: packages/*.nupkg
 
   release:
     name: Create GitHub Release
-    needs: build
+    needs: [build, pack]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:

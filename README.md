@@ -29,22 +29,22 @@ Pre-built, **self-contained** apps (no .NET install required) are published on t
 
 | Platform | Artifact |
 |----------|----------|
-| Windows (x64) | `ReceiptPrinterEmulator-win-x64.zip` |
-| Linux (x64) | `ReceiptPrinterEmulator-linux-x64.tar.gz` |
-| macOS (Intel) | `ReceiptPrinterEmulator-osx-x64.zip` (`.app` bundle) |
-| macOS (Apple Silicon) | `ReceiptPrinterEmulator-osx-arm64.zip` (`.app` bundle) |
+| Windows (x64) | `CrossEscPos-win-x64.zip` |
+| Linux (x64) | `CrossEscPos-linux-x64.tar.gz` |
+| macOS (Intel) | `CrossEscPos-osx-x64.zip` (`.app` bundle) |
+| macOS (Apple Silicon) | `CrossEscPos-osx-arm64.zip` (`.app` bundle) |
 
 Releases are produced by the [`Release`](.github/workflows/release.yml) GitHub Actions workflow on
 each `v*` tag.
 
 > **macOS first launch.** The `.app` is **ad-hoc signed but not notarized** (no paid Apple Developer
 > ID). macOS quarantines anything downloaded from the internet, so on first launch you may see
-> *"ReceiptPrinterEmulator is damaged and can't be opened"* (especially on Apple Silicon). Clear the
+> *"CrossEscPos is damaged and can't be opened"* (especially on Apple Silicon). Clear the
 > quarantine flag once, then open it:
 >
 > ```sh
-> xattr -dr com.apple.quarantine /path/to/ReceiptPrinterEmulator.app
-> open /path/to/ReceiptPrinterEmulator.app
+> xattr -dr com.apple.quarantine /path/to/CrossEscPos.app
+> open /path/to/CrossEscPos.app
 > ```
 >
 > (Right-click → **Open** also works once the quarantine is cleared.)
@@ -56,6 +56,7 @@ each `v*` tag.
   [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) (MVVM)
 - [ZXing.Net](https://github.com/micjahn/ZXing.Net) (1D barcodes) ·
   [QRCoder](https://github.com/codebude/QRCoder) (QR codes) ·
+  [Ardalis.SmartEnum](https://github.com/ardalis/SmartEnum) (class-based enums) ·
   [System.IO.Ports](https://www.nuget.org/packages/System.IO.Ports) (serial)
 - [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET) (the Monitor test client) ·
   [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) (direct USB printing)
@@ -156,10 +157,11 @@ port + baud and Open/Close it (⟳ refreshes the port list). The environment var
 Examples:
 
 ```sh
-dotnet run                                   # TCP only, port 9100
-ESCPOS_TCP_PORT=9200 dotnet run              # TCP on 9200
-ESCPOS_SERIAL_PORT=/dev/ttys004 dotnet run   # TCP 9100 + serial
-ESCPOS_TCP_PORT=off ESCPOS_SERIAL_PORT=COM3 dotnet run   # serial only
+# (run is shorthand for: dotnet run --project src/CrossEscPos.App.Desktop)
+dotnet run --project src/CrossEscPos.App.Desktop                  # TCP only, port 9100
+ESCPOS_TCP_PORT=9200 dotnet run --project src/CrossEscPos.App.Desktop   # TCP on 9200
+ESCPOS_SERIAL_PORT=/dev/ttys004 dotnet run --project src/CrossEscPos.App.Desktop  # TCP 9100 + serial
+ESCPOS_TCP_PORT=off ESCPOS_SERIAL_PORT=COM3 dotnet run --project src/CrossEscPos.App.Desktop  # serial only
 ```
 
 The status panel shows the active TCP endpoint and serial port.
@@ -185,7 +187,7 @@ Then, in two more terminals:
 
 ```sh
 # Terminal 2 — run the emulator on port A
-ESCPOS_SERIAL_PORT=/dev/ttys004 dotnet run
+ESCPOS_SERIAL_PORT=/dev/ttys004 dotnet run --project src/CrossEscPos.App.Desktop
 
 # Terminal 3 — send a receipt from "another app" on port B
 cat test_receipt.txt > /dev/ttys005
@@ -238,24 +240,81 @@ left panel save the rendered tickets as PNG:
 - **Export all (single image)** — stacks every receipt into one tall PNG (a save dialog).
 - **Export each cut (folder)** — writes one `receipt_NNN.png` per cut into a chosen folder.
 
-### Building & running
+### Architecture & packages
 
-```sh
-dotnet run
+The emulator is split into layered, independently-publishable packages so the **rendering backend is
+swappable** and the **core runs headless** (and in the browser). The namespace is unified under
+`CrossEscPos.*` (organized by feature/directory, not by package), so types resolve across assemblies.
+
+| Package | Namespace(s) | Role | Depends on |
+| --- | --- | --- | --- |
+| `CrossEscPos.Abstractions` | `CrossEscPos`, `CrossEscPos.Graphics` | Backend-agnostic rendering + printer contracts (`IReceiptCanvas`, `IReceiptImage`, `IReceiptImageFactory`, `ITypefaceProvider`, `IImageEncoder`, `IReceiptPrintable`, `IPrinterResponder`) | — |
+| `CrossEscPos.Core` | `CrossEscPos.Emulator`, `CrossEscPos.EscPos`, … | Headless ESC/POS interpreter, printer state machine, receipt document model, barcode/QR generation. ESC/POS code maps (2D families, code tables, barcode systems, status requests) are behaviour-carrying `SmartEnum`s, not magic-number switches | Abstractions, QRCoder, ZXing.Net, Ardalis.SmartEnum |
+| `CrossEscPos.Rendering.Skia` | `CrossEscPos.Rendering.Skia` | The default **render backend** (SkiaSharp). Swap it for another `IReceiptImageFactory`/`ITypefaceProvider`/`IImageEncoder` | Abstractions, SkiaSharp |
+| `CrossEscPos.Transports` | `CrossEscPos.Transports` | TCP / serial / USB transports (desktop only) | Core, System.IO.Ports, LibUsbDotNet, ESC-POS-.NET |
+| `CrossEscPos.Controls` | `CrossEscPos.Controls` | Reusable Avalonia controls (`ReceiptView`, `PrinterStatePanel`) — host apps consume these. **Backend-agnostic** (no SkiaSharp dependency) | Core, Avalonia |
+
+`Core` carries **no UI and no graphics-backend dependency**, so the library works headless or in WASM.
+The host (desktop, browser, or your own app) is the composition root: it picks a backend and injects it.
+
+```csharp
+var imageFactory = new SkiaImageFactory();
+var typefaces    = new SkiaTypefaceProvider();
+var printer      = new ReceiptPrinter(PaperConfiguration.Default, imageFactory, typefaces);
+printer.FeedEscPos(escPosBytes);                         // byte[] — ESC/POS is binary
+using var image  = printer.CurrentReceipt.Render();      // IReceiptImage
+new SkiaImageEncoder().EncodePng(image, outputStream);
 ```
 
-Requires the .NET 10 SDK. The app runs on Windows, macOS and Linux.
+### Building & running
+
+Requires the .NET 10 SDK (and the `wasm-tools` workload for the browser head:
+`dotnet workload install wasm-tools`).
+
+```sh
+# Desktop app (Windows / macOS / Linux)
+dotnet run --project src/CrossEscPos.App.Desktop
+
+# Headless: ESC/POS bytes -> PNG, no UI, no Avalonia
+dotnet run --project samples/CrossEscPos.Headless -- test_receipt.txt out.png
+
+# Browser (WASM): launches a dev server and opens the app
+dotnet run --project src/CrossEscPos.App.Browser
+
+# Tests (unit + headless UI)
+dotnet test CrossEscPos.slnx
+```
 
 - **Windows / macOS:** no extra setup — native rendering libraries ship with the Avalonia packages.
 - **Linux:** install the usual font/render native deps if they are missing, e.g.
   `sudo apt install libfontconfig1 libfreetype6` (Debian/Ubuntu).
 
+### Testing
+
+Two test projects under [`tests/`](tests):
+
+- **`CrossEscPos.Core.Tests`** — emulation coverage. ESC/POS sequences are fed through the interpreter
+  and the observable results (rendered draws, printer state, host responses, events) asserted: text
+  and control characters, styling (emphasis/italic/size/justification), cutting and feeding, 1D/2D
+  barcodes and bit images, status/transmit-back (`DLE EOT`, `GS r`, `GS I`, `GS a`), cash drawer and
+  buzzer, real-time commands, code pages, page mode and not-ready handling — plus exact `StatusByteBuilder`
+  bit layouts and the `SmartEnum` code maps. Rendering goes to a synthetic backend, so the suite runs
+  with no SkiaSharp (proving the core is headless).
+- **`CrossEscPos.Controls.Tests`** — headless Avalonia UI tests for the controls (two-way state binding,
+  receipt image rendering).
+
+```sh
+dotnet test CrossEscPos.slnx
+```
+
 ### Fonts & license
 
-Receipt text is rendered with **[JetBrains Mono](https://www.jetbrains.com/lp/mono/)**, bundled under
-[`Assets/Fonts/`](Assets/Fonts) so output is identical across platforms. JetBrains Mono is licensed
+Receipt text is rendered with **[JetBrains Mono](https://www.jetbrains.com/lp/mono/)**, embedded in the
+`CrossEscPos.Rendering.Skia` package (under
+[`src/CrossEscPos.Rendering.Skia/Assets/Fonts/`](src/CrossEscPos.Rendering.Skia/Assets/Fonts)) so output
+is identical across platforms and works in the browser sandbox (no file IO). JetBrains Mono is licensed
 under the **SIL Open Font License 1.1**; the full license text is included at
-[`Assets/Fonts/OFL.txt`](Assets/Fonts/OFL.txt). Per the OFL, the font is redistributed here under its
+[`src/CrossEscPos.Rendering.Skia/Assets/Fonts/OFL.txt`](src/CrossEscPos.Rendering.Skia/Assets/Fonts/OFL.txt). Per the OFL, the font is redistributed here under its
 original license and "JetBrains Mono" is a trademark of JetBrains s.r.o. To swap in a different
 monospace font, replace the `receipt-mono*.ttf` files (and keep its license alongside).
 

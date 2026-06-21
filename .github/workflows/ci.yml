@@ -14,7 +14,25 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+
+      # The browser (WASM) head needs the wasm-tools workload to build.
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore CrossEscPos.slnx
+
       - name: Build
-        run: dotnet build -c Release --no-restore
+        run: dotnet build CrossEscPos.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test CrossEscPos.slnx -c Release --no-build
+
+      - name: Pack libraries
+        run: dotnet pack CrossEscPos.slnx -c Release --no-build -o artifacts/packages
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: artifacts/packages/*.nupkg
+          if-no-files-found: warn

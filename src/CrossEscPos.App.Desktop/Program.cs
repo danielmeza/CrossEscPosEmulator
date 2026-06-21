@@ -1,0 +1,26 @@
+using Avalonia;
+using CrossEscPos.Logging;
+
+namespace CrossEscPos.App.Desktop;
+
+public static class Program
+{
+    // Initialization code. Don't use any Avalonia, third-party APIs or any
+    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
+    // yet and stuff might break.
+    [System.STAThread]
+    public static void Main(string[] args)
+    {
+        // Register process-wide exception logging before anything else so startup failures and
+        // background-thread crashes (e.g. transport teardown) are recorded rather than lost.
+        Logger.InstallGlobalHandlers();
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    // Avalonia configuration, don't remove; also used by visual designer.
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .WithInterFont()
+            .LogToTrace();
+}

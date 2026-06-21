@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:emu="using:CrossEscPos.Emulator"
+             xmlns:controls="using:CrossEscPos.Controls"
+             x:Class="CrossEscPos.Controls.PrinterStatePanel">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <!-- DataContext is the bound PrinterState, so the toggles two-way bind to it directly.
+             The combo item sources come from the panel itself (RelativeSource). -->
+        <StackPanel Margin="12"
+                    x:DataType="emu:PrinterState"
+                    DataContext="{Binding State, RelativeSource={RelativeSource AncestorType=controls:PrinterStatePanel}}">
+            <StackPanel.Styles>
+                <Style Selector="TextBlock.section">
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="Margin" Value="0 14 0 6"/>
+                </Style>
+                <Style Selector="TextBlock.label">
+                    <Setter Property="Foreground" Value="#AAAAAA"/>
+                    <Setter Property="FontSize" Value="11"/>
+                    <Setter Property="Margin" Value="0 8 0 2"/>
+                </Style>
+                <Style Selector="ComboBox">
+                    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                </Style>
+                <Style Selector="ToggleSwitch">
+                    <Setter Property="Margin" Value="0 2 0 0"/>
+                </Style>
+            </StackPanel.Styles>
+
+            <TextBlock Classes="section" Text="Printer state" Margin="0 0 0 6"/>
+
+            <ToggleSwitch IsChecked="{Binding Online, Mode=TwoWay}"
+                          OnContent="Online" OffContent="Offline"/>
+
+            <ToggleSwitch IsChecked="{Binding CoverOpen, Mode=TwoWay}"
+                          OnContent="Cover open" OffContent="Cover closed"/>
+
+            <TextBlock Classes="label" Text="Paper"/>
+            <ComboBox SelectedItem="{Binding Paper, Mode=TwoWay}"
+                      ItemsSource="{Binding PaperLevels, RelativeSource={RelativeSource AncestorType=controls:PrinterStatePanel}}"/>
+
+            <TextBlock Classes="label" Text="Error"/>
+            <ComboBox SelectedItem="{Binding Error, Mode=TwoWay}"
+                      ItemsSource="{Binding ErrorStates, RelativeSource={RelativeSource AncestorType=controls:PrinterStatePanel}}"/>
+
+            <TextBlock Classes="section" Text="Cash drawer"/>
+            <ToggleSwitch IsChecked="{Binding DrawerOpen, Mode=TwoWay}"
+                          OnContent="Open" OffContent="Closed"/>
+
+            <ToggleSwitch IsChecked="{Binding FeedButtonPressed, Mode=TwoWay}"
+                          OnContent="Feed button down" OffContent="Feed button up"
+                          Margin="0 14 0 0"/>
+
+            <TextBlock Classes="label" TextWrapping="Wrap"
+                       Text="These drive the status commands (DLE EOT, GS r) and Automatic Status Back (GS a) sent to the host."
+                       Margin="0 14 0 0"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

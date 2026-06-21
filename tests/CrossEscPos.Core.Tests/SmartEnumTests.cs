@@ -122,4 +122,37 @@ public class SmartEnumTests
     [InlineData(99, QRCodeGenerator.ECCLevel.M)] // unknown -> medium
     public void QrErrorCorrectionLevel_MapsParameter(int n, QRCodeGenerator.ECCLevel expected)
         => Assert.Equal(expected, QrErrorCorrectionLevel.FromParameter(n));
+
+    [Theory]
+    [InlineData(1, new byte[] { 0x02 })]   // ModelId (numeric)
+    [InlineData(49, new byte[] { 0x02 })]  // ModelId (ASCII '1')
+    [InlineData(2, new byte[] { 0x00 })]   // TypeId
+    [InlineData(3, new byte[] { 0x01 })]   // RomVersion
+    public void PrinterIdRequest_InfoA_ReturnsSingleByte(int n, byte[] expected)
+        => Assert.Equal(expected, PrinterIdRequest.FromParameter(n).Response);
+
+    [Fact]
+    public void PrinterIdRequest_InfoB_FramesTextResponse()
+    {
+        var response = PrinterIdRequest.FromParameter(66).Response; // MakerName
+        Assert.Equal(0x5F, response[0]);
+        Assert.Equal(0x00, response[^1]);
+        Assert.Equal("CrossEscPos", System.Text.Encoding.ASCII.GetString(response, 1, response.Length - 2));
+    }
+
+    [Fact]
+    public void PrinterIdRequest_UnknownParameter_FallsBackToGenericInfoB()
+        => Assert.Equal(PrinterIdRequest.Unknown, PrinterIdRequest.FromParameter(99));
+
+    [Theory]
+    [InlineData(67, "SetModuleSize")]
+    [InlineData(69, "SetErrorCorrection")]
+    [InlineData(80, "StoreData")]
+    [InlineData(81, "PrintSymbol")]
+    public void TwoDSymbolFunction_ResolvesFn(int fn, string expectedName)
+        => Assert.Equal(expectedName, TwoDSymbolFunction.FromValue(fn).Name);
+
+    [Fact]
+    public void TwoDSymbolFunction_UnknownFn_NotFound()
+        => Assert.False(TwoDSymbolFunction.TryFromValue(99, out _));
 }

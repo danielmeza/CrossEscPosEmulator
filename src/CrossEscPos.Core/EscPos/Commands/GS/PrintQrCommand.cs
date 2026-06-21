@@ -18,14 +18,6 @@ public class PrintQrCommand : BaseCommand
     public override string Prefix => EscPosInterpreter.GS + "(k";
     public override bool HasArgs => true;
 
-    // GS ( k function codes (the fn parameter).
-    private const int FnModel = 65;
-    private const int FnModuleSize = 67;
-    private const int FnErrorCorrection = 69;
-    private const int FnStoreData = 80;
-    private const int FnPrintSymbol = 81;
-    private const int FnTransmitSize = 82;
-
     private enum Phase { PL, PH, CN, FN, Params }
 
     private Phase _phase;
@@ -88,38 +80,9 @@ public class PrintQrCommand : BaseCommand
             return;
         }
 
-        var p = _params.ToString();
-
-        switch (_fn)
-        {
-            case FnModel: // select model / options — informational
-                Logger.Info($"2D select model/options: {(p.Length > 0 ? (int)p[0] : 0)}");
-                break;
-
-            case FnModuleSize: // module size (also PDF417 column width etc.)
-                if (p.Length > 0)
-                    printer.SetQrModuleSize((byte)p[0]);
-                break;
-
-            case FnErrorCorrection: // error correction level (QR)
-                if (p.Length > 0)
-                    printer.SetQrErrorCorrection(QrErrorCorrectionLevel.FromParameter((byte)p[0]));
-                break;
-
-            case FnStoreData: // store data in symbol storage area: p[0] = m, rest = data
-                printer.Store2DData(_cn, p.Length > 1 ? p.Substring(1) : string.Empty);
-                break;
-
-            case FnPrintSymbol: // print the symbol data in the storage area
-                printer.Print2D();
-                break;
-
-            case FnTransmitSize: // transmit size info — not applicable to an emulator
-                break;
-
-            default:
-                Logger.Info($"Unsupported 2D function fn={_fn}");
-                break;
-        }
+        if (TwoDSymbolFunction.TryFromValue(_fn, out var function))
+            function.Apply(printer, _cn, _params.ToString());
+        else
+            Logger.Info($"Unsupported 2D function fn={_fn}");
     }
 }

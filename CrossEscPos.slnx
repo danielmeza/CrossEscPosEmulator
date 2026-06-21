@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/CrossEscPos.Headless/CrossEscPos.Headless.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/CrossEscPos.Abstractions/CrossEscPos.Abstractions.csproj" />
+    <Project Path="src/CrossEscPos.App.Browser/CrossEscPos.App.Browser.csproj" />
+    <Project Path="src/CrossEscPos.App.Desktop/CrossEscPos.App.Desktop.csproj" />
+    <Project Path="src/CrossEscPos.Controls/CrossEscPos.Controls.csproj" />
+    <Project Path="src/CrossEscPos.Core/CrossEscPos.Core.csproj" />
+    <Project Path="src/CrossEscPos.Rendering.Skia/CrossEscPos.Rendering.Skia.csproj" />
+    <Project Path="src/CrossEscPos.Transports/CrossEscPos.Transports.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CrossEscPos.Controls.Tests/CrossEscPos.Controls.Tests.csproj" />
+    <Project Path="tests/CrossEscPos.Core.Tests/CrossEscPos.Core.Tests.csproj" />
+  </Folder>
+</Solution>

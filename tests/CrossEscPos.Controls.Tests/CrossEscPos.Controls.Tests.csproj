@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\CrossEscPos.Core\CrossEscPos.Core.csproj" />
+    <ProjectReference Include="..\..\src\CrossEscPos.Rendering.Skia\CrossEscPos.Rendering.Skia.csproj" />
+    <ProjectReference Include="..\..\src\CrossEscPos.Controls\CrossEscPos.Controls.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <!-- Avalonia.Headless.XUnit 12.x is built on xunit v3, so the test project must use v3. -->
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- Headless UI testing with real Skia rendering (so receipt bitmaps actually decode). -->
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Skia" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+  </ItemGroup>
+
+</Project>

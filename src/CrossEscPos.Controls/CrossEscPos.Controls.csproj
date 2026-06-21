@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <Description>Reusable Avalonia controls for hosting the CrossEscPos emulator: ReceiptView (renders
+      the live receipt stream), PrinterStatePanel (online/paper/cover/drawer/error), and PNG export
+      helpers. Backend-agnostic — depends on the rendering abstraction, not on SkiaSharp.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Core\CrossEscPos.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.4" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
+
+</Project>

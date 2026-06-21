@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CrossEscPos.App.Browser"
+             xmlns:controls="using:CrossEscPos.Controls"
+             x:Class="CrossEscPos.App.Browser.BrowserMainView"
+             x:DataType="vm:BrowserMainViewModel"
+             Background="#262626">
+
+    <DockPanel>
+        <!-- Input panel -->
+        <Border DockPanel.Dock="Left" Background="#3b3b3b" Width="280">
+            <StackPanel Margin="12">
+                <StackPanel.Styles>
+                    <Style Selector="Button">
+                        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        <Setter Property="Margin" Value="0 4 0 0"/>
+                    </Style>
+                    <Style Selector="TextBlock.section">
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Margin" Value="0 0 0 6"/>
+                    </Style>
+                </StackPanel.Styles>
+
+                <TextBlock Classes="section" Text="CrossEscPos — browser (WASM)"/>
+                <TextBlock Foreground="#AAAAAA" FontSize="11" TextWrapping="Wrap"
+                           Text="The headless emulator core + SkiaSharp render backend, running in your browser."
+                           Margin="0 0 0 8"/>
+
+                <TextBox Text="{Binding Input, Mode=TwoWay}"
+                         AcceptsReturn="True" TextWrapping="Wrap"
+                         Height="220" FontFamily="monospace"/>
+
+                <Button Command="{Binding RenderCommand}" Content="Render text"/>
+                <Button Command="{Binding RenderSampleCommand}" Content="Load sample ticket (barcodes + QR)"/>
+                <Button Command="{Binding ClearCommand}" Content="Clear"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Printer-state panel (reusable control) -->
+        <Border DockPanel.Dock="Right" Background="#3b3b3b" Width="220">
+            <controls:PrinterStatePanel State="{Binding State}"/>
+        </Border>
+
+        <!-- Receipt viewer (reusable control) -->
+        <controls:ReceiptView Receipts="{Binding Receipts}"/>
+    </DockPanel>
+</UserControl>

@@ -1,0 +1,34 @@
+<Project>
+
+  <!-- Shared build settings for every project in the repository. Individual projects override the
+       target framework (e.g. the desktop WinExe, the net10.0-browser WASM app) as needed. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!-- One shared root namespace across every assembly, so types resolve by feature/directory
+         (e.g. CrossEscPos.Emulator, CrossEscPos.Graphics) regardless of which package they live in. -->
+    <RootNamespace>CrossEscPos</RootNamespace>
+    <!-- The codebase uses explicit usings; keep implicit usings off to match. -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Security-audit findings (vulnerable packages) must fail the build/CI, not just warn. -->
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <!-- Libraries opt into packaging individually; apps and samples stay false. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata, applied to the projects that set IsPackable=true. -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <Authors>Daniel Meza</Authors>
+    <Product>CrossEscPos</Product>
+    <PackageProjectUrl>https://github.com/danielmeza/CrossEscPosEmulator</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/danielmeza/CrossEscPosEmulator</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>escpos;receipt;printer;emulator;thermal;pos</PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+</Project>

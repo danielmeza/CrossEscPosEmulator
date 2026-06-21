@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Headless ESC/POS emulator: byte-stream interpreter, printer state machine, receipt
+      document model and barcode/QR generation. Renders through the CrossEscPos.Abstractions surface,
+      so it carries no UI or graphics-backend dependency and runs headless or in WASM.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- INotifyPropertyChanged for PrinterState (UI-framework-agnostic source generators; WASM-safe),
+         so host UI panels can two-way bind directly to the simulated printer state. -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!-- Class-based enums: behaviour-carrying ESC/POS code maps (2D families, code tables, barcode
+         systems, status requests) as objects instead of magic-number switches. -->
+    <PackageReference Include="Ardalis.SmartEnum" Version="8.2.0" />
+    <!-- Barcode/QR matrix generation (managed only — drawn via the rendering abstraction). -->
+    <PackageReference Include="QRCoder" Version="1.8.0" />
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+    <!-- Legacy code pages (437/850/852/858/866/1252…) for ESC t character-table support are provided
+         by the .NET 10 shared framework (CodePagesEncodingProvider), so no package reference is needed. -->
+  </ItemGroup>
+
+</Project>

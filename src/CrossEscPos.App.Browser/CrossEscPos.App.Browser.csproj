@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-browser</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <!-- Generated browser interop glue trips analyzer warnings; don't fail the WASM head on them. -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WASM head: Controls + the Skia backend (Avalonia ships the SkiaSharp wasm natives).
+         Deliberately NO Transports reference (sockets/serial/USB don't exist in the browser). -->
+    <ProjectReference Include="..\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Core\CrossEscPos.Core.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Rendering.Skia\CrossEscPos.Rendering.Skia.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Controls\CrossEscPos.Controls.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Browser" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- A real ESC/POS ticket (text + barcodes + QR) shipped so the demo has something to render. -->
+    <EmbeddedResource Include="sample.escpos" LogicalName="sample.escpos" />
+  </ItemGroup>
+
+</Project>

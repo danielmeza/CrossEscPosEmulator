@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Backend-agnostic rendering and printer contracts for the CrossEscPos receipt emulator
+      (IReceiptCanvas, IReceiptImage, IReceiptImageFactory, ITypefaceProvider, IImageEncoder,
+      IReceiptPrintable, IPrinterResponder). No external dependencies — headless and WASM safe.</Description>
+  </PropertyGroup>
+
+</Project>

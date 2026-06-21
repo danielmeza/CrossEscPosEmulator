@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>crossescpos-render</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Headless rendering: Core (no UI) + the Skia backend. No Avalonia reference. -->
+    <ProjectReference Include="..\..\src\CrossEscPos.Core\CrossEscPos.Core.csproj" />
+    <ProjectReference Include="..\..\src\CrossEscPos.Rendering.Skia\CrossEscPos.Rendering.Skia.csproj" />
+  </ItemGroup>
+
+</Project>

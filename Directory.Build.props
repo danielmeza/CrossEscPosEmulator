@@ -20,7 +20,7 @@
 
   <!-- NuGet package metadata, applied to the projects that set IsPackable=true. -->
   <PropertyGroup>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Daniel Meza</Authors>
     <Product>CrossEscPos</Product>
     <PackageProjectUrl>https://github.com/danielmeza/CrossEscPosEmulator</PackageProjectUrl>

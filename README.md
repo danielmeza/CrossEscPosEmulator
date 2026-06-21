@@ -266,6 +266,9 @@ using var image  = printer.CurrentReceipt.Render();      // IReceiptImage
 new SkiaImageEncoder().EncodePng(image, outputStream);
 ```
 
+📦 **Package usage guides:** [`docs/packages/`](docs/packages/README.md) — getting started, the core
+emulator, rendering & custom backends, the Avalonia controls, and the transports.
+
 ### Building & running
 
 Requires the .NET 10 SDK (and the `wasm-tools` workload for the browser head:

@@ -95,7 +95,7 @@ jobs:
       - name: Pack
         shell: bash
         run: |
-          for proj in Abstractions Core Rendering.Skia Transports Controls; do
+          for proj in Abstractions Core Rendering.Skia Rendering.ImageSharp Transports Controls; do
             dotnet pack "src/CrossEscPos.$proj/CrossEscPos.$proj.csproj" \
               -c Release -p:Version=${{ steps.ver.outputs.version }} -o packages
           done

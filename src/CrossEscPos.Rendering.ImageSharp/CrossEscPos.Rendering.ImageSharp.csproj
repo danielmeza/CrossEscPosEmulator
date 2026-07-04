@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>ImageSharp implementation of the CrossEscPos rendering abstraction (canvas, image,
+      image factory, typeface provider and PNG encoder). A fully managed, WASM-safe render backend —
+      no native dependencies — mirroring the SkiaSharp backend so the interpreter produces identical
+      output. Fonts are embedded.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Fully managed 2D drawing (glyphs, lines, fills, image compositing). -->
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
+    <!-- Explicit pin: Drawing 2.1.7 pulls SixLabors.ImageSharp 3.1.8, which has the transitive
+         advisory GHSA-rxmq-m78w-7wmc. Pinning 3.1.12 clears the NuGetAudit finding so the
+         warnings-as-errors build stays clean. -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Embedded monospace font (JetBrains Mono, OFL) loaded from the assembly manifest — no file IO,
+         so the package is self-contained and works in the browser sandbox. Explicit LogicalName keeps
+         the manifest resource names stable (no path/hyphen munging). -->
+    <EmbeddedResource Include="Assets\Fonts\receipt-mono.ttf"            LogicalName="receipt-mono.ttf" />
+    <EmbeddedResource Include="Assets\Fonts\receipt-mono-bold.ttf"       LogicalName="receipt-mono-bold.ttf" />
+    <EmbeddedResource Include="Assets\Fonts\receipt-mono-italic.ttf"     LogicalName="receipt-mono-italic.ttf" />
+    <EmbeddedResource Include="Assets\Fonts\receipt-mono-bolditalic.ttf" LogicalName="receipt-mono-bolditalic.ttf" />
+  </ItemGroup>
+
+</Project>

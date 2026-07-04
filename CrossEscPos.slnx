@@ -8,6 +8,7 @@
     <Project Path="src/CrossEscPos.App.Desktop/CrossEscPos.App.Desktop.csproj" />
     <Project Path="src/CrossEscPos.Controls/CrossEscPos.Controls.csproj" />
     <Project Path="src/CrossEscPos.Core/CrossEscPos.Core.csproj" />
+    <Project Path="src/CrossEscPos.Rendering.ImageSharp/CrossEscPos.Rendering.ImageSharp.csproj" />
     <Project Path="src/CrossEscPos.Rendering.Skia/CrossEscPos.Rendering.Skia.csproj" />
     <Project Path="src/CrossEscPos.Transports/CrossEscPos.Transports.csproj" />
   </Folder>

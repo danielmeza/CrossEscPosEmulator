@@ -1,0 +1,11 @@
+<Project>
+
+  <!-- Runs AFTER each project's own PropertyGroup, so $(IsPackable) reflects the per-project override
+       (Directory.Build.props imports first, when IsPackable is still the default false). Packs the shared
+       README into the root of every packable NuGet package to satisfy <PackageReadmeFile>. The LICENSE is
+       declared via <PackageLicenseExpression> (SPDX), which needs no packed file. -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>

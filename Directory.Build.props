@@ -22,13 +22,25 @@
   <PropertyGroup>
     <Version>1.1.0</Version>
     <Authors>Daniel Meza</Authors>
+    <!-- Packages are published to the Gasoleo Technology organization on nuget.org. -->
+    <Company>Gasoleo Technology</Company>
     <Product>CrossEscPos</Product>
+    <Copyright>Copyright (c) 2026 Daniel Meza / Gasoleo Technology</Copyright>
     <PackageProjectUrl>https://github.com/danielmeza/CrossEscPosEmulator</PackageProjectUrl>
     <RepositoryUrl>https://github.com/danielmeza/CrossEscPosEmulator</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>escpos;receipt;printer;emulator;thermal;pos</PackageTags>
+    <!-- SPDX license expression; the LICENSE file at the repo root is packed via Directory.Build.targets. -->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- Source Link: embed repo/commit info and untracked sources so consumers can step into the code.
+         The GitHub Source Link provider ships in the .NET SDK, so no extra package reference is needed. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <!-- Deterministic, CI-stamped builds when running on GitHub Actions. -->
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
 </Project>

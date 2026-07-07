@@ -28,8 +28,25 @@ public sealed class ImageSharpReceiptFont : IReceiptFont
         }
     }
 
+    private float? _sentinelAdvance;
+
+    // Advance width — matches SkiaSharp's SKFont.MeasureText, which the receipt layout relies on for
+    // justification, multi-run advance, and underline length. Two SixLabors quirks are corrected here:
+    //   * MeasureSize returns the ink bounding box (drops side bearings) — MeasureAdvance is the advance.
+    //   * MeasureAdvance trims *trailing* whitespace, but Skia (and the IReceiptFont contract) counts it;
+    //     receipts pad columns with trailing spaces. Appending a non-whitespace sentinel makes those
+    //     spaces interior, then we subtract the sentinel's own advance. The receipt font is monospace
+    //     with no kerning, so this reproduces Skia's advance exactly.
     public float MeasureText(string text)
-        => TextMeasurer.MeasureSize(text, new TextOptions(Font)).Width;
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0f;
+
+        const string sentinel = ".";
+        var options = new TextOptions(Font);
+        _sentinelAdvance ??= TextMeasurer.MeasureAdvance(sentinel, options).Width;
+        return TextMeasurer.MeasureAdvance(text + sentinel, options).Width - _sentinelAdvance.Value;
+    }
 
     // SixLabors.Fonts.Font is not IDisposable; the font family is shared/cached by the provider.
     public void Dispose()

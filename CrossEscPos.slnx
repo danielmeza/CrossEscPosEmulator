@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/samples/">
     <Project Path="samples/CrossEscPos.Headless/CrossEscPos.Headless.csproj" />
+    <Project Path="samples/CrossEscPos.Web/CrossEscPos.Web.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/CrossEscPos.Abstractions/CrossEscPos.Abstractions.csproj" />

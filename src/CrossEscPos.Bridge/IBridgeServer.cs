@@ -15,7 +15,17 @@ public interface IBridgeServer
     /// </summary>
     Task AttachEmulator(string address, int port);
 
-    /// <summary>Send an ESC/POS job (from a monitor/POS) to the attached emulator.</summary>
+    /// <summary>
+    /// As a <b>monitor</b>, ask the proxy to open an outbound TCP connection to a real network printer at
+    /// <paramref name="host"/>:<paramref name="port"/>. After this, <see cref="SendToEmulator"/> writes to
+    /// that socket and its replies come back via <c>ReceiveStatus</c>. Throws if the printer can't be reached.
+    /// </summary>
+    Task ConnectTcp(string host, int port);
+
+    /// <summary>
+    /// Send an ESC/POS job to this connection's target — the attached emulator, or the TCP printer opened
+    /// with <see cref="ConnectTcp"/> if one is active.
+    /// </summary>
     Task SendToEmulator(byte[] data);
 
     /// <summary>The emulator's status reply, routed back to whoever last sent.</summary>

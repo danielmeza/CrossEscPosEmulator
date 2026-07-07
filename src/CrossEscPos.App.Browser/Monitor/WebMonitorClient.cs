@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -13,19 +12,21 @@ using CrossEscPos.Transports.Browser;
 namespace CrossEscPos.App.Browser.Monitor;
 
 /// <summary>
-/// The browser Monitor, with the same multi-transport shape as the desktop one — you pick a transport and
-/// drive a printer with it: <b>SignalR proxy</b> (round-trip to the in-page emulator through the host), a
-/// real <b>Web Serial</b> device, or a real <b>WebUSB</b> device. Serial/USB reuse the shared JS bridge on
-/// their own sender channels (<c>mon-serial</c>/<c>mon-usb</c>) so they don't clash with the emulator's
-/// connections. Device selection is the browser's native picker (Web Serial / WebUSB), and paired USB
-/// devices can be listed by VID:PID.
+/// The browser Monitor, with the same transports as the desktop one — pick a transport and drive a
+/// printer: <b>Network (TCP)</b> (the host dials a real network printer on the browser's behalf through
+/// the SignalR proxy), <b>Web Serial</b>, <b>WebUSB</b>, or the <b>SignalR proxy</b> round-trip to the
+/// in-page emulator. Serial/USB reuse the shared JS bridge on their own sender channels
+/// (<c>mon-serial</c>/<c>mon-usb</c>) so they don't clash with the emulator's connections.
 /// </summary>
 public sealed class WebMonitorClient : IMonitorClient
 {
-    private const string Proxy = "SignalR proxy", Serial = "Web Serial", Usb = "WebUSB";
+    private const string Proxy = "SignalR proxy", Tcp = "Network (TCP)", Serial = "Web Serial", Usb = "WebUSB";
 
     private readonly IJsTransportBridge _bridge;
+    private readonly string _hubUrl;
     private readonly TransportField _url;
+    private readonly TransportField _host = new("Host", "127.0.0.1");
+    private readonly TransportField _port = new("Port", "9100");
     private readonly TransportField _baud = new("Baud", "9600");
     private readonly TransportField _usbDevice = new("Device (VID:PID)", "", new[] { "" });
 
@@ -39,10 +40,11 @@ public sealed class WebMonitorClient : IMonitorClient
         _bridge.DataReceived += OnBridgeData;
 
         var origin = WasmJsTransportBridge.PageOrigin();
-        _url = new TransportField("Proxy URL", (string.IsNullOrEmpty(origin) ? "http://localhost:5000" : origin) + "/bridge");
+        _hubUrl = (string.IsNullOrEmpty(origin) ? "http://localhost:5000" : origin) + "/bridge";
+        _url = new TransportField("Proxy URL", _hubUrl);
     }
 
-    public IReadOnlyList<string> Modes { get; } = new[] { Proxy, Serial, Usb };
+    public IReadOnlyList<string> Modes { get; } = new[] { Proxy, Tcp, Serial, Usb };
 
     public string Mode
     {
@@ -58,6 +60,7 @@ public sealed class WebMonitorClient : IMonitorClient
 
     public IReadOnlyList<TransportField> Fields => _mode switch
     {
+        Tcp => new[] { _host, _port },
         Serial => new[] { _baud },
         Usb => new[] { _usbDevice },
         _ => new[] { _url },
@@ -69,6 +72,7 @@ public sealed class WebMonitorClient : IMonitorClient
     public event Action<MonitorStatus>? StatusReceived;
     public event Action<string>? Log;
 
+    private bool IsHubMode => _mode is Proxy or Tcp;
     private string KindId => _mode == Usb ? "mon-usb" : "mon-serial";
 
     public async Task RefreshAsync()
@@ -88,17 +92,34 @@ public sealed class WebMonitorClient : IMonitorClient
 
     public async Task<string> ConnectAsync()
     {
-        if (_mode == Proxy)
-            return await ConnectProxyAsync();
+        if (IsHubMode)
+        {
+            await StartHubAsync(_mode == Proxy ? _url.Value : _hubUrl);
+            if (_mode == Tcp)
+            {
+                int port = int.TryParse(_port.Value, out var p) ? p : 9100;
+                await _server!.ConnectTcp(_host.Value, port);
+                return $"{_host.Value}:{port}";
+            }
+            return _url.Value;
+        }
 
         // Serial: pass the baud; USB: pass the selected device's index (or none → the picker).
-        string? options = _mode == Serial
-            ? _baud.Value
-            : IndexOf(_usbDevice);
+        string? options = _mode == Serial ? _baud.Value : IndexOf(_usbDevice);
         var description = await _bridge.ConnectAsync(KindId, options);
         if (string.IsNullOrEmpty(description))
             throw new InvalidOperationException("Connection cancelled.");
         return description;
+    }
+
+    private async Task StartHubAsync(string url)
+    {
+        var hub = new HubConnectionBuilder().WithUrl(url).WithAutomaticReconnect().Build();
+        hub.On<byte[]>(nameof(IBridgeClient.ReceiveStatus), OnStatusBytes);
+        hub.Closed += _ => { Log?.Invoke("proxy connection closed"); return Task.CompletedTask; };
+        await hub.StartAsync();
+        _hub = hub;
+        _server = new BridgeServerProxy(hub);
     }
 
     private string? IndexOf(TransportField dropdown)
@@ -110,23 +131,12 @@ public sealed class WebMonitorClient : IMonitorClient
         return i >= 0 ? i.ToString() : null; // null → the JS side opens the device picker
     }
 
-    private async Task<string> ConnectProxyAsync()
-    {
-        var hub = new HubConnectionBuilder().WithUrl(_url.Value).WithAutomaticReconnect().Build();
-        hub.On<byte[]>(nameof(IBridgeClient.ReceiveStatus), OnStatusBytes);
-        hub.Closed += _ => { Log?.Invoke("proxy connection closed"); return Task.CompletedTask; };
-        await hub.StartAsync();
-        _hub = hub;
-        _server = new BridgeServerProxy(hub);
-        return _url.Value;
-    }
-
     public async Task SendAsync(byte[] data)
     {
-        if (_mode == Proxy)
+        if (IsHubMode)
         {
             var server = _server ?? throw new InvalidOperationException("Not connected.");
-            await server.SendToEmulator(data);
+            await server.SendToEmulator(data); // routed to the emulator, or the TCP printer if one is open
         }
         else
         {
@@ -136,7 +146,7 @@ public sealed class WebMonitorClient : IMonitorClient
 
     public void Disconnect()
     {
-        if (_mode == Proxy)
+        if (IsHubMode)
         {
             var hub = _hub;
             _hub = null;
@@ -152,7 +162,7 @@ public sealed class WebMonitorClient : IMonitorClient
 
     private void OnBridgeData(string kind, byte[] data)
     {
-        if (_mode != Proxy && kind == KindId)
+        if (!IsHubMode && kind == KindId)
             OnStatusBytes(data);
     }
 

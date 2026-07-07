@@ -20,6 +20,7 @@ public sealed class BridgeHub : Hub<IBridgeClient>, IBridgeServer
     internal static IHubContext<BridgeHub, IBridgeClient>? Context_; // strongly-typed client proxy
 
     private static readonly ConcurrentDictionary<string, TcpSession> Sessions = new();
+    private static readonly ConcurrentDictionary<string, TcpClient> Outbound = new(); // monitor → printer
 
     private sealed record TcpSession(TcpListener Listener, CancellationTokenSource Cts);
 
@@ -48,9 +49,38 @@ public sealed class BridgeHub : Hub<IBridgeClient>, IBridgeServer
         return Task.CompletedTask;
     }
 
+    public async Task ConnectTcp(string host, int port)
+    {
+        var connection = Context.ConnectionId;
+        CloseOutbound(connection);
+
+        var client = new TcpClient();
+        try
+        {
+            await client.ConnectAsync(host, port);
+        }
+        catch (Exception ex)
+        {
+            client.Dispose();
+            throw new HubException($"Could not connect to {host}:{port} — {ex.Message}");
+        }
+
+        Outbound[connection] = client;
+        Console.WriteLine($"[tcp-out] monitor → printer {host}:{port}");
+        _ = PumpOutbound(connection, client);
+    }
+
     public Task SendToEmulator(byte[] data)
     {
         var connection = Context.ConnectionId;
+
+        // A monitor that opened an outbound TCP printer writes to that socket instead of the emulator.
+        if (Outbound.TryGetValue(connection, out var printer))
+        {
+            try { return printer.GetStream().WriteAsync(data).AsTask(); }
+            catch { return Task.CompletedTask; }
+        }
+
         SenderReply = d => Context_!.Clients.Client(connection).ReceiveStatus(d);
         return ForwardToEmulator(data);
     }
@@ -61,9 +91,37 @@ public sealed class BridgeHub : Hub<IBridgeClient>, IBridgeServer
     {
         var connection = Context.ConnectionId;
         StopSession(connection);
+        CloseOutbound(connection);
         if (EmulatorConnection == connection)
             EmulatorConnection = null;
         return base.OnDisconnectedAsync(exception);
+    }
+
+    private static void CloseOutbound(string connection)
+    {
+        if (Outbound.TryRemove(connection, out var client))
+        {
+            try { client.Close(); client.Dispose(); } catch { /* already gone */ }
+            Console.WriteLine("[tcp-out] printer connection closed");
+        }
+    }
+
+    /// <summary>Pump a monitor's outbound TCP printer: its bytes → the monitor as status replies.</summary>
+    private static async Task PumpOutbound(string connection, TcpClient client)
+    {
+        try
+        {
+            var stream = client.GetStream();
+            var buffer = new byte[4096];
+            int read;
+            while ((read = await stream.ReadAsync(buffer)) > 0)
+            {
+                if (Context_ is not null)
+                    await Context_.Clients.Client(connection).ReceiveStatus(buffer[..read]);
+            }
+        }
+        catch { /* printer gone */ }
+        CloseOutbound(connection);
     }
 
     private static Task ForwardToEmulator(byte[] data)

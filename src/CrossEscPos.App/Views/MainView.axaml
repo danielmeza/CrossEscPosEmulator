@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:CrossEscPos.App.ViewModels"
+             xmlns:controls="using:CrossEscPos.Controls"
+             mc:Ignorable="d" d:DesignWidth="1120" d:DesignHeight="820"
+             x:Class="CrossEscPos.App.Views.MainView"
+             x:DataType="vm:MainViewModel"
+             Background="#262626">
+
+    <Grid>
+        <DockPanel>
+            <!-- Left: input + connections + actions + export -->
+            <Border DockPanel.Dock="Left" Background="#3b3b3b" Width="270">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="12">
+                        <StackPanel.Styles>
+                            <Style Selector="Button">
+                                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                <Setter Property="Margin" Value="0 4 0 0"/>
+                            </Style>
+                            <Style Selector="TextBlock.section">
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Margin" Value="0 14 0 4"/>
+                            </Style>
+                        </StackPanel.Styles>
+
+                        <!-- Input -->
+                        <TextBlock Classes="section" Text="ESC/POS input" Margin="0 0 0 4"/>
+                        <TextBox Text="{Binding Input, Mode=TwoWay}" AcceptsReturn="True"
+                                 TextWrapping="Wrap" Height="180" FontFamily="monospace"/>
+                        <Button Command="{Binding RenderCommand}" Content="Render"/>
+                        <Button Command="{Binding LoadSampleCommand}" Content="Load sample (barcodes + QR)"/>
+                        <Button Command="{Binding ClearCommand}" Content="Clear"/>
+
+                        <!-- Connections (platform transport UI, injected by the head) -->
+                        <ContentControl Content="{Binding ConnectionsView}" Margin="0 8 0 0"/>
+
+                        <!-- Actions -->
+                        <TextBlock Classes="section" Text="Actions" IsVisible="{Binding SupportsMonitor}"/>
+                        <Button Command="{Binding OpenMonitorCommand}" Content="Open monitor…"
+                                IsVisible="{Binding SupportsMonitor}"/>
+
+                        <!-- Export (Avalonia's storage provider — a native dialog on desktop, a download in the browser) -->
+                        <TextBlock Classes="section" Text="Export"/>
+                        <Button Command="{Binding ExportAllCommand}" Content="Export all (single image)…"/>
+                        <Button Command="{Binding ExportEachCommand}" Content="Export each cut (folder)…"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Right: reusable printer-state panel -->
+            <Border DockPanel.Dock="Right" Background="#3b3b3b" Width="220">
+                <controls:PrinterStatePanel State="{Binding State}"/>
+            </Border>
+
+            <!-- Center: reusable receipt viewer -->
+            <controls:ReceiptView Name="Receipts" Receipts="{Binding Receipts}"/>
+        </DockPanel>
+
+        <!-- Transient toast for buzzer / cash-drawer events -->
+        <Border IsVisible="{Binding ToastVisible}"
+                HorizontalAlignment="Center" VerticalAlignment="Top"
+                Margin="0 24 0 0" Padding="20 12"
+                Background="#E6202020" CornerRadius="8"
+                BoxShadow="0 4 16 0 #80000000" IsHitTestVisible="False">
+            <TextBlock Text="{Binding ToastMessage}" Foreground="White" FontSize="16" FontWeight="SemiBold"/>
+        </Border>
+    </Grid>
+</UserControl>

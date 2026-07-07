@@ -3,7 +3,7 @@ using CrossEscPos.Graphics;
 using CrossEscPos.Rendering.ImageSharp;
 using CrossEscPos.Rendering.Skia;
 
-namespace CrossEscPos.App.Desktop;
+namespace CrossEscPos.App;
 
 /// <summary>
 /// Selects the render backend at startup so the two rendering libraries can be A/B tested visually.

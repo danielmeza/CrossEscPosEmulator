@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CrossEscPos.App.Desktop.ViewModels"
+             x:Class="CrossEscPos.App.Desktop.Views.ConnectionsView"
+             x:DataType="vm:ConnectionsViewModel">
+    <StackPanel>
+        <StackPanel.Styles>
+            <Style Selector="Button">
+                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="Margin" Value="0 4 0 0"/>
+            </Style>
+            <Style Selector="TextBlock.section">
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Margin" Value="0 14 0 4"/>
+            </Style>
+            <Style Selector="TextBlock.label">
+                <Setter Property="Foreground" Value="#AAAAAA"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Margin" Value="0 6 0 2"/>
+            </Style>
+            <Style Selector="ComboBox"><Setter Property="HorizontalAlignment" Value="Stretch"/></Style>
+            <Style Selector="TextBox"><Setter Property="HorizontalAlignment" Value="Stretch"/></Style>
+        </StackPanel.Styles>
+
+        <!-- TCP -->
+        <TextBlock Classes="section" Text="TCP/IP"/>
+        <TextBlock Classes="label" Text="Listen address"/>
+        <ComboBox ItemsSource="{Binding AvailableAddresses}" SelectedItem="{Binding SelectedAddress}"/>
+        <TextBlock Classes="label" Text="Port"/>
+        <TextBox Text="{Binding TcpPortText}"/>
+        <Button Command="{Binding ToggleTcpCommand}" Content="{Binding TcpButtonText}"/>
+        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBrush}"
+                   TextWrapping="Wrap" FontSize="11" Margin="0 4 0 0"/>
+
+        <!-- Serial -->
+        <TextBlock Classes="section" Text="Serial"/>
+        <TextBlock Classes="label" Text="Port"/>
+        <Grid ColumnDefinitions="*,Auto">
+            <ComboBox Grid.Column="0" ItemsSource="{Binding AvailablePorts}" SelectedItem="{Binding SelectedSerialPort}"/>
+            <Button Grid.Column="1" Command="{Binding RefreshSerialPortsCommand}" Content="⟳"
+                    Margin="4 0 0 0" ToolTip.Tip="Refresh ports"/>
+        </Grid>
+        <TextBlock Classes="label" Text="Baud rate"/>
+        <TextBox Text="{Binding BaudText}"/>
+        <Button Command="{Binding ToggleSerialCommand}" Content="{Binding SerialButtonText}"/>
+        <TextBlock Text="{Binding SerialStatusText}" Foreground="#CCCCCC"
+                   TextWrapping="Wrap" FontSize="11" Margin="0 4 0 0"/>
+    </StackPanel>
+</UserControl>

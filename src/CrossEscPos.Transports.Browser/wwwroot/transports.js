@@ -82,7 +82,10 @@
   }
 
   // ---- Web Serial (native, with a WebUSB CDC-ACM fallback) ----
-  const serial = (() => {
+  // A factory (not a singleton) so independent channels can each own a device — e.g. the emulator
+  // receiving on "serial" and the Monitor sending on "mon-serial" at the same time. `chan` is the kind
+  // used for the onData/onClosed callbacks.
+  function makeSerial(chan) {
     let port = null, reader = null, keep = false;
     // Supported natively (Chromium) or emulated over WebUSB anywhere WebUSB exists.
     const isSupported = () => ('serial' in navigator) || ('usb' in navigator);
@@ -103,10 +106,10 @@
     async function loop() {
       while (port && port.readable && keep) {
         reader = port.readable.getReader();
-        try { for (;;) { const { value, done } = await reader.read(); if (done) break; if (value && value.length) cx.onData('serial', value); } }
+        try { for (;;) { const { value, done } = await reader.read(); if (done) break; if (value && value.length) cx.onData(chan, value); } }
         catch {} finally { try { reader.releaseLock(); } catch {} reader = null; }
       }
-      cx.onClosed('serial');
+      cx.onClosed(chan);
     }
     async function write(payload) {
       if (!port || !port.writable) return;
@@ -120,14 +123,21 @@
       port = null; reader = null;
     }
     return { isSupported, connect, write, disconnect };
-  })();
+  }
 
   // ---- WebUSB ----
-  const usb = (() => {
+  // Factory, like makeSerial. `connect(options)` uses the picker; when `options` is a numeric string it
+  // opens that entry from navigator.usb.getDevices() instead (so the Monitor can pick from a list).
+  function makeUsb(chan) {
     let device = null, epIn = null, epOut = null, packet = 64, reading = false;
     const isSupported = () => 'usb' in navigator;
-    async function connect() {
-      let dev; try { dev = await navigator.usb.requestDevice({ filters: [] }); } catch { return null; }
+    async function connect(options) {
+      let dev;
+      const idx = parseInt(options, 10);
+      if (Number.isInteger(idx) && idx >= 0) {
+        try { dev = (await navigator.usb.getDevices())[idx]; } catch {}
+      }
+      if (!dev) { try { dev = await navigator.usb.requestDevice({ filters: [] }); } catch { return null; } }
       try {
         await dev.open();
         if (dev.configuration === null) await dev.selectConfiguration(1);
@@ -154,10 +164,10 @@
         try {
           const r = await device.transferIn(epIn, packet);
           if (r.status === 'stall') { await device.clearHalt('in', epIn); continue; }
-          if (r.data && r.data.byteLength) cx.onData('usb', new Uint8Array(r.data.buffer));
+          if (r.data && r.data.byteLength) cx.onData(chan, new Uint8Array(r.data.buffer));
         } catch { break; }
       }
-      cx.onClosed('usb');
+      cx.onClosed(chan);
     }
     async function write(payload) {
       if (!device || epOut === null) return;
@@ -166,14 +176,27 @@
     async function disconnect() { reading = false; const d = device; device = null; await close(d); }
     async function close(d) { try { if (d && d.opened) await d.close(); } catch {} }
     return { isSupported, connect, write, disconnect };
-  })();
+  }
 
-  const impl = (kind) => (kind === 'usb' ? usb : serial);
+  // One instance per kind, created on demand. "serial"/"usb" are the emulator's; "mon-serial"/"mon-usb"
+  // are the Monitor's independent sender channels — a *usb kind uses WebUSB, anything else Web Serial.
+  const channels = {};
+  const impl = (kind) => (channels[kind] ||= (kind.indexOf('usb') >= 0 ? makeUsb(kind) : makeSerial(kind)));
 
   cx.isSupported = (kind) => impl(kind).isSupported();
   cx.connect = (kind, options) => impl(kind).connect(options);
   cx.write = (kind, payload) => impl(kind).write(payload);
   cx.disconnect = (kind) => impl(kind).disconnect();
+
+  // Paired WebUSB devices as newline-joined "vid:pid name" labels (index = getDevices order) — lets the
+  // Monitor list devices to pick from. Newline-joined (not JSON) so the .NET side stays trim-safe.
+  cx.listUsb = async () => {
+    if (!('usb' in navigator)) return '';
+    const hex = n => (n || 0).toString(16).padStart(4, '0');
+    const devices = await navigator.usb.getDevices();
+    return devices.map(d =>
+      `${hex(d.vendorId)}:${hex(d.productId)}${d.productName ? ' ' + d.productName : ''}`).join('\n');
+  };
 
   // The page's origin, so the SignalR TCP-proxy transport defaults to the same host that served the app.
   cx.origin = () => globalThis.location.origin;

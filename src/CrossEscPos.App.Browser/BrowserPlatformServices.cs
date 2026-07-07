@@ -15,15 +15,17 @@ namespace CrossEscPos.App.Browser;
 
 /// <summary>
 /// The browser platform: the Skia render backend (Avalonia's browser renderer already links it),
-/// export via Avalonia's storage provider (a download), no-op notifications, and the Web Serial /
-/// WebUSB / WebSocket transports. Injected into the shared <see cref="CrossEscPos.App.App"/>, which
-/// runs as a single view here (no window, no Monitor).
+/// export via Avalonia's storage provider (a download), no-op notifications, the Web Serial / WebUSB /
+/// SignalR transports, and the in-page Monitor. Injected into the shared <see cref="CrossEscPos.App.App"/>,
+/// which runs as a single view here.
 /// </summary>
 public sealed class BrowserPlatformServices : IPlatformServices
 {
     private readonly RenderBackend _backend = RenderBackend.Select(Array.Empty<string>()); // Skia
     private readonly FileDialogService _dialogs = new();
     private readonly BrowserNotificationService _notifications = new();
+    // One bridge instance (its [JSExport] delivery slot is static) shared by the transports + Monitor.
+    private readonly WasmJsTransportBridge _bridge = new();
 
     public IReceiptImageFactory ImageFactory => _backend.ImageFactory;
     public ITypefaceProvider Typefaces => _backend.Typefaces;
@@ -36,9 +38,8 @@ public sealed class BrowserPlatformServices : IPlatformServices
     public IReadOnlyList<TransportEntry> CreateTransports(ReceiptPrinter printer)
     {
         var sink = new BrowserTransportSink(printer);
-        var bridge = new WasmJsTransportBridge();
-        var serial = new WebTransport(bridge, sink, "serial", "Web Serial");
-        var usb = new WebTransport(bridge, sink, "usb", "WebUSB");
+        var serial = new WebTransport(_bridge, sink, "serial", "Web Serial");
+        var usb = new WebTransport(_bridge, sink, "usb", "WebUSB");
         var signalr = new SignalRTransport(sink, "SignalR");
 
         // Default the proxy to the same origin that served the app (the CrossEscPos.Host).
@@ -66,7 +67,7 @@ public sealed class BrowserPlatformServices : IPlatformServices
         };
     }
 
-    public IMonitorClient CreateMonitorClient() => new SignalRMonitorClient();
+    public IMonitorClient CreateMonitorClient() => new WebMonitorClient(_bridge);
 
     public bool MonitorInWindow => false; // the browser hosts the Monitor as an in-page overlay
 

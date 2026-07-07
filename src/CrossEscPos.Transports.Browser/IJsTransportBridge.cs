@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace CrossEscPos.Transports.Browser;
@@ -24,6 +25,9 @@ public interface IJsTransportBridge
     ValueTask WriteAsync(string kind, byte[] data);
 
     ValueTask DisconnectAsync(string kind);
+
+    /// <summary>Paired WebUSB devices as <c>"vid:pid name"</c> labels (for the Monitor's device list).</summary>
+    ValueTask<IReadOnlyList<string>> ListUsbDevicesAsync();
 
     /// <summary>Raised when a chunk of ESC/POS arrives from a device: <c>(kind, bytes)</c>.</summary>
     event Action<string, byte[]> DataReceived;

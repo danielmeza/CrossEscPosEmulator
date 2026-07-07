@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices.JavaScript;
 using System.Threading.Tasks;
 using CrossEscPos.Transports.Browser;
@@ -33,6 +34,12 @@ public sealed partial class WasmJsTransportBridge : IJsTransportBridge
 
     public ValueTask DisconnectAsync(string kind) => new(Disconnect(kind));
 
+    public async ValueTask<IReadOnlyList<string>> ListUsbDevicesAsync()
+    {
+        var joined = await ListUsb();
+        return string.IsNullOrEmpty(joined) ? Array.Empty<string>() : joined.Split('\n');
+    }
+
     /// <summary>The page origin (e.g. <c>http://localhost:5000</c>) that served the app.</summary>
     public static string PageOrigin()
     {
@@ -64,4 +71,7 @@ public sealed partial class WasmJsTransportBridge : IJsTransportBridge
 
     [JSImport("globalThis.crossescpos.origin")]
     private static partial string Origin();
+
+    [JSImport("globalThis.crossescpos.listUsb")]
+    private static partial Task<string> ListUsb();
 }

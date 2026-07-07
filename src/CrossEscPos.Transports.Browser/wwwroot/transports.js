@@ -200,4 +200,14 @@
 
   // The page's origin, so the SignalR TCP-proxy transport defaults to the same host that served the app.
   cx.origin = () => globalThis.location.origin;
+
+  // Download bytes as a file (blob + anchor) — works in every browser, unlike the File System Access API.
+  cx.downloadFile = (name, b64) => {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name || 'receipt.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 })();

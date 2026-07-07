@@ -22,7 +22,7 @@ namespace CrossEscPos.App.Browser;
 public sealed class BrowserPlatformServices : IPlatformServices
 {
     private readonly RenderBackend _backend = RenderBackend.Select(Array.Empty<string>()); // Skia
-    private readonly FileDialogService _dialogs = new();
+    private readonly BrowserFileDialogService _dialogs = new();
     private readonly BrowserNotificationService _notifications = new();
     // One bridge instance (its [JSExport] delivery slot is static) shared by the transports + Monitor.
     private readonly WasmJsTransportBridge _bridge = new();
@@ -73,7 +73,7 @@ public sealed class BrowserPlatformServices : IPlatformServices
 
     public void ShowMonitorWindow(MonitorViewModel monitor) { /* unused; browser hosts in-page */ }
 
-    public void AttachRoot(Control mainView) => _dialogs.AttachControl(mainView);
+    public void AttachRoot(Control mainView) { /* browser downloads via JS — no top level needed */ }
 
     public Window CreateMainWindow(Control content)
         => throw new NotSupportedException("The browser head runs as a single view.");

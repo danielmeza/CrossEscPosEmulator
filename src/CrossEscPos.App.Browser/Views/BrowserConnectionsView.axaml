@@ -38,6 +38,6 @@
         <TextBlock Classes="status" Text="{Binding WsStatus}"/>
 
         <TextBlock Classes="status" TextWrapping="Wrap" Margin="0 8 0 0"
-                   Text="Serial/USB need Chromium + a user gesture. WebSocket bridges TCP:9100 via CrossEscPos.WsProxy."/>
+                   Text="Web Serial uses the native API where available, else a WebUSB (CDC-ACM) fallback; both need a user gesture. WebSocket bridges TCP:9100 via CrossEscPos.WsProxy."/>
     </StackPanel>
 </UserControl>

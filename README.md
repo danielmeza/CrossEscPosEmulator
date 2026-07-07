@@ -153,6 +153,7 @@ port + baud and Open/Close it (⟳ refreshes the port list). The environment var
 | `ESCPOS_SERIAL_PORT` | *(unset)* | Serial device to auto-open (e.g. `/dev/ttys004`, `COM3`). Unset = serial closed. |
 | `ESCPOS_SERIAL_BAUD` | `9600` | Serial baud rate. |
 | `ESCPOS_DEBUG_DUMP` | *(off)* | Set to `1` to dump every received payload to `last_*` files. |
+| `ESCPOS_RENDER_BACKEND` | `skia` | Render backend: `skia` (default) or `imagesharp` (managed). The `--backend` arg overrides it. |
 
 Examples:
 
@@ -162,6 +163,15 @@ dotnet run --project src/CrossEscPos.App.Desktop                  # TCP only, po
 ESCPOS_TCP_PORT=9200 dotnet run --project src/CrossEscPos.App.Desktop   # TCP on 9200
 ESCPOS_SERIAL_PORT=/dev/ttys004 dotnet run --project src/CrossEscPos.App.Desktop  # TCP 9100 + serial
 ESCPOS_TCP_PORT=off ESCPOS_SERIAL_PORT=COM3 dotnet run --project src/CrossEscPos.App.Desktop  # serial only
+```
+
+**Pick the render backend** (for A/B testing the two rendering libraries) with `--backend skia`
+(default) or `--backend imagesharp` (the managed, no-native backend). The active backend is shown in
+the window title bar.
+
+```sh
+dotnet run --project src/CrossEscPos.App.Desktop -- --backend imagesharp   # managed ImageSharp backend
+dotnet run --project src/CrossEscPos.App.Desktop -- --backend skia         # default SkiaSharp backend
 ```
 
 The status panel shows the active TCP endpoint and serial port.
@@ -284,12 +294,21 @@ dotnet run --project src/CrossEscPos.App.Desktop
 # Headless: ESC/POS bytes -> PNG, no UI, no Avalonia
 dotnet run --project samples/CrossEscPos.Headless -- test_receipt.txt out.png
 
-# Browser (WASM): launches a dev server and opens the app
+# Browser (Avalonia WASM head): launches a dev server and opens the app
 dotnet run --project src/CrossEscPos.App.Browser
+
+# Blazor web emulator: pick the render engine (managed ImageSharp by default), render ESC/POS
+# in the browser, and drive the printer state — the managed-backend showcase
+dotnet run --project samples/CrossEscPos.Web
 
 # Tests (unit + headless UI)
 dotnet test CrossEscPos.slnx
 ```
+
+The **Blazor web app** ([`samples/CrossEscPos.Web`](samples/CrossEscPos.Web)) renders receipts entirely
+in the browser and lets you switch the render engine at runtime — **ImageSharp (managed)** by default
+(no native relink) or **SkiaSharp (native)**. It mirrors the desktop `ReceiptView` / `PrinterStatePanel`
+as Razor components. Paste ESC/POS text, upload a file, or load the bundled sample.
 
 - **Windows / macOS:** no extra setup — native rendering libraries ship with the Avalonia packages.
 - **Linux:** install the usual font/render native deps if they are missing, e.g.

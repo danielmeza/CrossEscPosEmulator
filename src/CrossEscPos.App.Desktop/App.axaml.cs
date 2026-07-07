@@ -4,7 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using CrossEscPos.Emulator;
-using CrossEscPos.Rendering.Skia;
+using CrossEscPos.Logging;
 using CrossEscPos.Controls.Services;
 using CrossEscPos.App.Desktop.ViewModels;
 using CrossEscPos.App.Desktop.Views;
@@ -22,10 +22,13 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Composition root: pick the render backend (SkiaSharp) and wire it into the headless core.
-            var imageFactory = new SkiaImageFactory();
-            var typefaces = new SkiaTypefaceProvider();
-            var encoder = new SkiaImageEncoder();
+            // Composition root: pick the render backend and wire it into the headless core. The backend
+            // is selectable at runtime so the two rendering libraries can be visually A/B tested.
+            var backend = RenderBackend.Select(desktop.Args ?? Array.Empty<string>());
+            Logger.Info($"Render backend: {backend.Name}");
+            var imageFactory = backend.ImageFactory;
+            var typefaces = backend.Typefaces;
+            var encoder = backend.Encoder;
 
             var printer = new ReceiptPrinter(PaperConfiguration.Default, imageFactory, typefaces);
             // Marshal off-thread state mutations (e.g. a drawer kick over TCP) to the UI thread.
@@ -45,6 +48,8 @@ public partial class App : Application
                 string.IsNullOrWhiteSpace(serialPort) ? null : serialPort, serialBaud);
 
             var window = new MainWindow { DataContext = viewModel };
+            // Surface the active backend in the title bar so visual comparisons are unambiguous.
+            window.Title = $"{window.Title}  •  Render: {backend.Name}";
             notifications.AttachWindow(window);
             dialogs.AttachTopLevel(window); // Window is a TopLevel
             desktop.MainWindow = window;

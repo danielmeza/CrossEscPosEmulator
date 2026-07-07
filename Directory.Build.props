@@ -20,7 +20,7 @@
 
   <!-- NuGet package metadata, applied to the projects that set IsPackable=true. -->
   <PropertyGroup>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>Daniel Meza</Authors>
     <!-- Packages are published to the Gasoleo Technology organization on nuget.org. -->
     <Company>Gasoleo Technology</Company>

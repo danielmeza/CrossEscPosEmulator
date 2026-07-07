@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:CrossEscPos.App.ViewModels"
+             xmlns:tr="using:CrossEscPos.App.Transports"
              xmlns:controls="using:CrossEscPos.Controls"
              mc:Ignorable="d" d:DesignWidth="1120" d:DesignHeight="820"
              x:Class="CrossEscPos.App.Views.MainView"
@@ -36,8 +37,37 @@
                         <Button Command="{Binding LoadSampleCommand}" Content="Load sample (barcodes + QR)"/>
                         <Button Command="{Binding ClearCommand}" Content="Clear"/>
 
-                        <!-- Connections (platform transport UI, injected by the head) -->
-                        <ContentControl Content="{Binding ConnectionsView}" Margin="0 8 0 0"/>
+                        <!-- Connections — one shared view over the platform's self-describing transports -->
+                        <TextBlock Classes="section" Text="Connections"/>
+                        <ItemsControl ItemsSource="{Binding Transports}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="tr:TransportEntry">
+                                    <StackPanel Margin="0 0 0 10">
+                                        <TextBlock Text="{Binding Name}" Foreground="#DDDDDD" FontWeight="SemiBold" Margin="0 6 0 2"/>
+                                        <ItemsControl ItemsSource="{Binding Fields}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="tr:TransportField">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Label}" Foreground="#AAAAAA" FontSize="11" Margin="0 4 0 2"/>
+                                                        <ComboBox IsVisible="{Binding IsDropdown}" ItemsSource="{Binding Options}"
+                                                                  SelectedItem="{Binding Value, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
+                                                        <TextBox IsVisible="{Binding !IsDropdown}" Text="{Binding Value, Mode=TwoWay}"
+                                                                 HorizontalAlignment="Stretch"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0 4 0 0">
+                                            <Button Grid.Column="0" Command="{Binding ToggleCommand}" Content="{Binding ButtonText}"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                                            <Button Grid.Column="1" Command="{Binding RefreshCommand}" Content="⟳"
+                                                    IsVisible="{Binding CanRefresh}" Margin="4 0 0 0" ToolTip.Tip="Refresh"/>
+                                        </Grid>
+                                        <TextBlock Text="{Binding Status}" Foreground="#9aa0a8" FontSize="11" TextWrapping="Wrap" Margin="0 4 0 0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
                         <!-- Actions -->
                         <TextBlock Classes="section" Text="Actions" IsVisible="{Binding SupportsMonitor}"/>

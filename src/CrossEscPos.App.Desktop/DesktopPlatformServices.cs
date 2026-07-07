@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using Avalonia.Controls;
 using CrossEscPos.App;
+using CrossEscPos.App.Desktop.Transports;
 using CrossEscPos.App.Desktop.ViewModels;
 using CrossEscPos.App.Desktop.Views;
+using CrossEscPos.App.Transports;
 using CrossEscPos.Controls.Services;
 using CrossEscPos.Emulator;
 using CrossEscPos.Graphics;
@@ -18,7 +21,7 @@ public sealed class DesktopPlatformServices : IPlatformServices
     private readonly RenderBackend _backend;
     private readonly FileDialogService _dialogs = new();
     private readonly NotificationService _notifications = new();
-    private ConnectionsViewModel? _connections;
+    private TcpTransportEntry? _tcp;
     private MonitorWindow? _monitorWindow;
 
     public DesktopPlatformServices(RenderBackend backend) => _backend = backend;
@@ -31,16 +34,17 @@ public sealed class DesktopPlatformServices : IPlatformServices
     public INotificationService Notifications => _notifications;
     public byte[] SampleTicket => Sample.Ticket;
 
-    public Control CreateConnectionsView(ReceiptPrinter printer)
+    public IReadOnlyList<TransportEntry> CreateTransports(ReceiptPrinter printer)
     {
         var (tcpEnabled, tcpPort) = ReadTcpSettings();
         var serialPort = Environment.GetEnvironmentVariable("ESCPOS_SERIAL_PORT");
         int serialBaud = int.TryParse(Environment.GetEnvironmentVariable("ESCPOS_SERIAL_BAUD"), out var b) ? b : 9600;
         var listenAddress = Environment.GetEnvironmentVariable("ESCPOS_LISTEN_ADDRESS") ?? "0.0.0.0";
 
-        _connections = new ConnectionsViewModel(printer, listenAddress, tcpPort, tcpEnabled,
-            string.IsNullOrWhiteSpace(serialPort) ? null : serialPort, serialBaud);
-        return new ConnectionsView { DataContext = _connections };
+        _tcp = new TcpTransportEntry(printer, listenAddress, tcpPort, tcpEnabled);
+        var serial = new SerialTransportEntry(printer,
+            string.IsNullOrWhiteSpace(serialPort) ? null : serialPort, serialBaud, autoStart: serialPort is not null);
+        return new TransportEntry[] { _tcp, serial };
     }
 
     public bool SupportsMonitor => true;
@@ -54,7 +58,7 @@ public sealed class DesktopPlatformServices : IPlatformServices
         }
         _monitorWindow = new MonitorWindow
         {
-            DataContext = new MonitorWindowViewModel(_connections?.CurrentTcpPort ?? 9100)
+            DataContext = new MonitorWindowViewModel(_tcp?.CurrentPort ?? 9100)
         };
         _monitorWindow.Closed += (_, _) => _monitorWindow = null;
         _monitorWindow.Show();
@@ -74,7 +78,7 @@ public sealed class DesktopPlatformServices : IPlatformServices
         return window;
     }
 
-    public void Shutdown() => _connections?.Shutdown();
+    public void Shutdown() { /* transports are stopped by MainViewModel.Shutdown */ }
 
     private static (bool enabled, int port) ReadTcpSettings()
     {

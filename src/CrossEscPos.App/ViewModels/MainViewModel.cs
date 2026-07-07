@@ -50,8 +50,8 @@ public partial class MainViewModel : ObservableObject
     public bool HasReceipts => Receipts.Count > 0;
     public PrinterState State => _printer.State;
 
-    /// <summary>The platform's transport UI (desktop TCP/serial; browser Web Serial / WebUSB / WebSocket).</summary>
-    public Control ConnectionsView { get; }
+    /// <summary>The platform's transports, rendered uniformly by the shared connections view.</summary>
+    public IReadOnlyList<Transports.TransportEntry> Transports { get; }
 
     public bool SupportsMonitor => _platform.SupportsMonitor;
     public string BackendName => _platform.BackendName;
@@ -80,7 +80,7 @@ public partial class MainViewModel : ObservableObject
         _printer.OnCashDrawer += () => Dispatcher.UIThread.Post(() => { _notifications.OpenCashDrawer(); ShowToast("💵  Cash drawer opened"); });
         _printer.OnPrintBlocked += reason => Dispatcher.UIThread.Post(() => ShowToast($"🚫  {reason} — print dropped"));
 
-        ConnectionsView = platform.CreateConnectionsView(printer);
+        Transports = platform.CreateTransports(printer);
 
         Render(); // render the default input so the app shows something on launch
     }
@@ -173,8 +173,12 @@ public partial class MainViewModel : ObservableObject
 
     #endregion
 
-    /// <summary>Called on shutdown — transports are stopped by the head via <see cref="IPlatformServices.Shutdown"/>.</summary>
-    public void Shutdown() { }
+    /// <summary>Called on shutdown — stop every transport.</summary>
+    public void Shutdown()
+    {
+        foreach (var transport in Transports)
+            transport.Shutdown();
+    }
 
     private void ShowToast(string message)
     {

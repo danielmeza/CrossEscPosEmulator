@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
 using Avalonia.Controls;
 using CrossEscPos.App;
-using CrossEscPos.App.Browser.ViewModels;
-using CrossEscPos.App.Browser.Views;
+using CrossEscPos.App.Browser.Transports;
+using CrossEscPos.App.Transports;
 using CrossEscPos.Controls.Services;
 using CrossEscPos.Emulator;
 using CrossEscPos.Graphics;
+using CrossEscPos.Transports.Browser;
 
 namespace CrossEscPos.App.Browser;
 
@@ -29,8 +31,24 @@ public sealed class BrowserPlatformServices : IPlatformServices
     public INotificationService Notifications => _notifications;
     public byte[] SampleTicket => Sample.Ticket;
 
-    public Control CreateConnectionsView(ReceiptPrinter printer)
-        => new BrowserConnectionsView { DataContext = new BrowserConnectionsViewModel(printer) };
+    public IReadOnlyList<TransportEntry> CreateTransports(ReceiptPrinter printer)
+    {
+        var sink = new BrowserTransportSink(printer);
+        var bridge = new WasmJsTransportBridge();
+        var serial = new WebTransport(bridge, sink, "serial", "Web Serial");
+        var usb = new WebTransport(bridge, sink, "usb", "WebUSB");
+        var ws = new WebSocketTransport(sink, "WebSocket");
+
+        var baud = new TransportField("Baud", "9600");
+        var url = new TransportField("URL", "ws://localhost:5000/ws");
+
+        return new TransportEntry[]
+        {
+            new ReceiptTransportEntry(serial, "Web Serial", baud, v => serial.Options = v),
+            new ReceiptTransportEntry(usb, "WebUSB"),
+            new ReceiptTransportEntry(ws, "WebSocket (TCP proxy)", url, v => ws.Url = v),
+        };
+    }
 
     public bool SupportsMonitor => false;
     public void OpenMonitor() { }

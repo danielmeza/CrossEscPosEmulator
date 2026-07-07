@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Avalonia.Controls;
 using CrossEscPos.Controls.Services;
 using CrossEscPos.Emulator;
@@ -27,10 +28,10 @@ public interface IPlatformServices
     byte[] SampleTicket { get; }
 
     /// <summary>
-    /// Builds the platform's "connections" UI (its transports), wired to <paramref name="printer"/>.
-    /// Desktop returns a TCP/serial panel; the browser returns a Web Serial / WebUSB / WebSocket panel.
+    /// The platform's transports, wired to <paramref name="printer"/> — desktop yields TCP + serial;
+    /// the browser yields Web Serial + WebUSB + SignalR. The shared connections view renders them all.
     /// </summary>
-    Control CreateConnectionsView(ReceiptPrinter printer);
+    IReadOnlyList<Transports.TransportEntry> CreateTransports(ReceiptPrinter printer);
 
     /// <summary>Whether this platform offers the separate Monitor test-client window (desktop only).</summary>
     bool SupportsMonitor { get; }

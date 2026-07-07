@@ -45,7 +45,8 @@
                                 <DataTemplate x:DataType="tr:TransportEntry">
                                     <StackPanel Margin="0 0 0 10">
                                         <TextBlock Text="{Binding Name}" Foreground="#DDDDDD" FontWeight="SemiBold" Margin="0 6 0 2"/>
-                                        <ItemsControl ItemsSource="{Binding Fields}">
+                                        <!-- Lock the fields while connected — you can't change the endpoint mid-session. -->
+                                        <ItemsControl ItemsSource="{Binding Fields}" IsEnabled="{Binding !IsActive}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="tr:TransportField">
                                                     <StackPanel>
@@ -62,7 +63,8 @@
                                             <Button Grid.Column="0" Command="{Binding ToggleCommand}" Content="{Binding ButtonText}"
                                                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                                             <Button Grid.Column="1" Command="{Binding RefreshCommand}" Content="⟳"
-                                                    IsVisible="{Binding CanRefresh}" Margin="4 0 0 0" ToolTip.Tip="Refresh"/>
+                                                    IsVisible="{Binding CanRefresh}" IsEnabled="{Binding !IsActive}"
+                                                    Margin="4 0 0 0" ToolTip.Tip="Refresh"/>
                                         </Grid>
                                         <TextBlock Text="{Binding Status}" Foreground="#9aa0a8" FontSize="11" TextWrapping="Wrap" Margin="0 4 0 0"/>
                                     </StackPanel>

@@ -90,8 +90,13 @@ public sealed class WebMonitorClient : IMonitorClient
             Log?.Invoke("No paired USB devices — click Connect to pair one.");
     }
 
+    // GS a n — enable Automatic Status Back (any non-zero n). The printer then pushes a status block on
+    // every state change; without this the status panel never updates. (The desktop monitor does the same.)
+    private static readonly byte[] EnableAutoStatusBack = [0x1D, 0x61, 0xFF];
+
     public async Task<string> ConnectAsync()
     {
+        string description;
         if (IsHubMode)
         {
             await StartHubAsync(_mode == Proxy ? _url.Value : _hubUrl);
@@ -99,16 +104,25 @@ public sealed class WebMonitorClient : IMonitorClient
             {
                 int port = int.TryParse(_port.Value, out var p) ? p : 9100;
                 await _server!.ConnectTcp(_host.Value, port);
-                return $"{_host.Value}:{port}";
+                description = $"{_host.Value}:{port}";
             }
-            return _url.Value;
+            else
+            {
+                description = _url.Value;
+            }
+        }
+        else
+        {
+            // Serial: pass the baud; USB: pass the selected device's index (or none → the picker).
+            string? options = _mode == Serial ? _baud.Value : IndexOf(_usbDevice);
+            var desc = await _bridge.ConnectAsync(KindId, options);
+            if (string.IsNullOrEmpty(desc))
+                throw new InvalidOperationException("Connection cancelled.");
+            description = desc;
         }
 
-        // Serial: pass the baud; USB: pass the selected device's index (or none → the picker).
-        string? options = _mode == Serial ? _baud.Value : IndexOf(_usbDevice);
-        var description = await _bridge.ConnectAsync(KindId, options);
-        if (string.IsNullOrEmpty(description))
-            throw new InvalidOperationException("Connection cancelled.");
+        try { await SendAsync(EnableAutoStatusBack); }
+        catch { /* status stays best-effort */ }
         return description;
     }
 

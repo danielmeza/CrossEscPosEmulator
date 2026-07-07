@@ -58,8 +58,11 @@
     }
 </section>
 
-@* Column 3 — printer state *@
-<PrinterStatePanel State="Host.State" />
+@* Column 3 — printer state + live connections *@
+<div class="col-stack">
+    <PrinterStatePanel State="Host.State" />
+    <ConnectionsPanel />
+</div>
 
 @code {
     private string _text = "*** CrossEscPos Web ***\nManaged ImageSharp backend\n\nItem            $ 4.50\nTax             $ 0.36\nTOTAL           $ 4.86\n\nThank you!\n";

@@ -20,6 +20,10 @@ public sealed class EmulatorHost
     private ReceiptPrinter _printer = null!;
     private IImageEncoder _encoder = null!;
 
+    // Live transports (Web Serial / WebUSB) registered as responders — re-attached to the new printer
+    // whenever the render engine is swapped, so a connection survives an engine switch.
+    private readonly List<IPrinterResponder> _liveResponders = new();
+
     /// <summary>Raised whenever the printer, its receipts, or its state change (drives UI refresh).</summary>
     public event Action? Changed;
 
@@ -64,6 +68,33 @@ public sealed class EmulatorHost
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Feeds bytes from a live transport into the current printer <b>without</b> resetting the receipt
+    /// stack — a connected device streams a continuous session, exactly like the desktop transports.
+    /// <paramref name="responder"/> is the transport itself, so status replies go back over the same link.
+    /// </summary>
+    public void FeedLive(byte[] data, IPrinterResponder responder)
+    {
+        _printer.FeedEscPos(data, responder);
+        Changed?.Invoke();
+    }
+
+    /// <summary>Registers a transport as a long-lived responder (also receives Automatic Status Back).</summary>
+    public void AttachResponder(IPrinterResponder responder)
+    {
+        if (_liveResponders.Contains(responder))
+            return;
+        _liveResponders.Add(responder);
+        _printer.RegisterResponder(responder);
+    }
+
+    /// <summary>Unregisters a transport responder.</summary>
+    public void DetachResponder(IPrinterResponder responder)
+    {
+        _liveResponders.Remove(responder);
+        _printer.UnregisterResponder(responder);
+    }
+
     /// <summary>Renders a single receipt to a base64 PNG for an <c>&lt;img&gt;</c> data URI.</summary>
     public string RenderPngBase64(Receipt receipt)
     {
@@ -93,6 +124,10 @@ public sealed class EmulatorHost
 
         _printer.OnActivityEvent += (_, _) => Changed?.Invoke();
         _printer.State.Changed += () => Changed?.Invoke();
+
+        // Re-attach any live transports to the freshly built printer.
+        foreach (var responder in _liveResponders)
+            _printer.RegisterResponder(responder);
 
         if (LastInput.Length > 0)
             _printer.FeedEscPos(LastInput);

@@ -12,4 +12,8 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 // The emulator host owns the ReceiptPrinter + the active render backend for the whole app session.
 builder.Services.AddSingleton<EmulatorHost>();
 
+// Browser transports (Web Serial / WebUSB) — one instance each, holding the live connection.
+builder.Services.AddSingleton<CrossEscPos.Web.Transports.WebSerialTransport>();
+builder.Services.AddSingleton<CrossEscPos.Web.Transports.WebUsbTransport>();
+
 await builder.Build().RunAsync();

@@ -1,0 +1,73 @@
+@* Live browser transports — Web Serial and WebUSB. A connected device streams ESC/POS into the
+   emulator and receives status replies over the same link, mirroring the desktop transports. *@
+@implements IDisposable
+@inject WebSerialTransport Serial
+@inject WebUsbTransport Usb
+
+<div class="card">
+    <h2>Live connections</h2>
+
+    @foreach (var t in Transports)
+    {
+        var supported = t == Serial ? _serialSupported : _usbSupported;
+        <div class="conn-row">
+            <div class="conn-info">
+                <span class="conn-name">@t.Kind</span>
+                <span class="conn-status @(t.IsConnected ? "on" : "")">
+                    @(t.IsConnected ? t.Description
+                      : supported ? "not connected"
+                      : "unsupported")
+                </span>
+            </div>
+            @if (t.IsConnected)
+            {
+                <button class="btn ghost" @onclick="() => ToggleAsync(t)">Disconnect</button>
+            }
+            else
+            {
+                <button class="btn" disabled="@(!supported)" @onclick="() => ToggleAsync(t)">Connect</button>
+            }
+        </div>
+    }
+
+    @if (!_serialSupported && !_usbSupported)
+    {
+        <p class="note">Web Serial / WebUSB need a Chromium browser (Chrome, Edge) over HTTPS or localhost.</p>
+    }
+    <p class="note">
+        A connected device streams ESC/POS into the emulator; status replies (DLE EOT, GS r, Automatic
+        Status Back) go back over the same link — the browser analogue of the desktop transports.
+    </p>
+</div>
+
+@code {
+    private bool _serialSupported;
+    private bool _usbSupported;
+
+    private IReceiptTransport[] Transports => new IReceiptTransport[] { Serial, Usb };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Serial.StateChanged += OnChanged;
+        Usb.StateChanged += OnChanged;
+        _serialSupported = await Serial.IsSupportedAsync();
+        _usbSupported = await Usb.IsSupportedAsync();
+        StateHasChanged();
+    }
+
+    private async Task ToggleAsync(IReceiptTransport t)
+    {
+        if (t.IsConnected)
+            await t.DisconnectAsync();
+        else
+            await t.ConnectAsync();   // opens the device picker (user gesture)
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Serial.StateChanged -= OnChanged;
+        Usb.StateChanged -= OnChanged;
+    }
+}

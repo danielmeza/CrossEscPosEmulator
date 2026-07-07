@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- The shared Avalonia application (App, MainView, MainViewModel) reused by the Desktop and
+         Browser heads. Platform-specific bits (transports, and the head lifetime) are injected via
+         IPlatformServices; everything else — rendering, receipts, printer state, export, notifications —
+         is shared. Not a shipped package. -->
+    <IsPackable>false</IsPackable>
+    <!-- Avalonia XAML previewer / compiled bindings. -->
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!-- The Monitor's test-job generator uses the ESCPOS_NET EPSON emitter (pure managed byte
+         building; the native serial/USB printers live in the desktop head's transports). -->
+    <PackageReference Include="ESCPOS_NET" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Core\CrossEscPos.Core.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Controls\CrossEscPos.Controls.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Rendering.Skia\CrossEscPos.Rendering.Skia.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Rendering.ImageSharp\CrossEscPos.Rendering.ImageSharp.csproj" />
+    <!-- Transport abstractions (IReceiptTransport / ITransportProvider) live here; concrete transports
+         are provided by each head. -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Sample ESC/POS ticket (text + barcodes + QR) for the "Load sample" button. -->
+    <EmbeddedResource Include="sample.escpos" LogicalName="sample.escpos" />
+    <!-- Full-feature test receipt sent by the Monitor's "full feature test" (works on both heads). -->
+    <EmbeddedResource Include="test_receipt.txt" LogicalName="test_receipt.txt" />
+  </ItemGroup>
+
+</Project>

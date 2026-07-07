@@ -3,17 +3,15 @@
   <PropertyGroup>
     <TargetFramework>net10.0-browser</TargetFramework>
     <OutputType>Exe</OutputType>
-    <!-- Generated browser interop glue trips analyzer warnings; don't fail the WASM head on them. -->
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- [JSImport]/[JSExport] source generators require unsafe code. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- WASM head: Controls + the Skia backend (Avalonia ships the SkiaSharp wasm natives).
-         Deliberately NO Transports reference (sockets/serial/USB don't exist in the browser). -->
-    <ProjectReference Include="..\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
-    <ProjectReference Include="..\CrossEscPos.Core\CrossEscPos.Core.csproj" />
-    <ProjectReference Include="..\CrossEscPos.Rendering.Skia\CrossEscPos.Rendering.Skia.csproj" />
-    <ProjectReference Include="..\CrossEscPos.Controls\CrossEscPos.Controls.csproj" />
+    <!-- Thin browser head over the shared Avalonia app; the browser transports (Web Serial / WebUSB /
+         WebSocket) come from CrossEscPos.Transports.Browser. -->
+    <ProjectReference Include="..\CrossEscPos.App\CrossEscPos.App.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Transports.Browser\CrossEscPos.Transports.Browser.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,8 +21,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- A real ESC/POS ticket (text + barcodes + QR) shipped so the demo has something to render. -->
-    <EmbeddedResource Include="sample.escpos" LogicalName="sample.escpos" />
+    <!-- The shared transports.js, linked into wwwroot (served at /transports.js). -->
+    <Content Include="..\CrossEscPos.Transports.Browser\wwwroot\transports.js"
+             Link="wwwroot/transports.js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

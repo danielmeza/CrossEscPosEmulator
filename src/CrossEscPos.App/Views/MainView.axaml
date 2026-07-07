@@ -1,0 +1,120 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:CrossEscPos.App.ViewModels"
+             xmlns:tr="using:CrossEscPos.App.Transports"
+             xmlns:views="using:CrossEscPos.App.Views"
+             xmlns:controls="using:CrossEscPos.Controls"
+             mc:Ignorable="d" d:DesignWidth="1120" d:DesignHeight="820"
+             x:Class="CrossEscPos.App.Views.MainView"
+             x:DataType="vm:MainViewModel"
+             Background="#262626">
+
+    <Grid>
+        <DockPanel>
+            <!-- Left: input + connections + actions + export -->
+            <Border DockPanel.Dock="Left" Background="#3b3b3b" Width="270">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="12">
+                        <StackPanel.Styles>
+                            <Style Selector="Button">
+                                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                <Setter Property="Margin" Value="0 4 0 0"/>
+                            </Style>
+                            <Style Selector="TextBlock.section">
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Margin" Value="0 14 0 4"/>
+                            </Style>
+                        </StackPanel.Styles>
+
+                        <!-- Input -->
+                        <TextBlock Classes="section" Text="ESC/POS input" Margin="0 0 0 4"/>
+                        <TextBox Text="{Binding Input, Mode=TwoWay}" AcceptsReturn="True"
+                                 TextWrapping="Wrap" Height="180" FontFamily="monospace"/>
+                        <Button Command="{Binding RenderCommand}" Content="Render"/>
+                        <Button Command="{Binding LoadSampleCommand}" Content="Load sample (barcodes + QR)"/>
+                        <Button Command="{Binding ClearCommand}" Content="Clear"/>
+
+                        <!-- Connections — one shared view over the platform's self-describing transports -->
+                        <TextBlock Classes="section" Text="Connections"/>
+                        <ItemsControl ItemsSource="{Binding Transports}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="tr:TransportEntry">
+                                    <StackPanel Margin="0 0 0 10">
+                                        <TextBlock Text="{Binding Name}" Foreground="#DDDDDD" FontWeight="SemiBold" Margin="0 6 0 2"/>
+                                        <!-- Lock the fields while connected — you can't change the endpoint mid-session. -->
+                                        <ItemsControl ItemsSource="{Binding Fields}" IsEnabled="{Binding !IsActive}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="tr:TransportField">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Label}" Foreground="#AAAAAA" FontSize="11" Margin="0 4 0 2"/>
+                                                        <ComboBox IsVisible="{Binding IsDropdown}" ItemsSource="{Binding Options}"
+                                                                  SelectedItem="{Binding Value, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
+                                                        <TextBox IsVisible="{Binding !IsDropdown}" Text="{Binding Value, Mode=TwoWay}"
+                                                                 HorizontalAlignment="Stretch"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0 4 0 0">
+                                            <Button Grid.Column="0" Command="{Binding ToggleCommand}" Content="{Binding ButtonText}"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                                            <Button Grid.Column="1" Command="{Binding RefreshCommand}" Content="⟳"
+                                                    IsVisible="{Binding CanRefresh}" IsEnabled="{Binding !IsActive}"
+                                                    Margin="4 0 0 0" ToolTip.Tip="Refresh"/>
+                                        </Grid>
+                                        <TextBlock Text="{Binding Status}" Foreground="#9aa0a8" FontSize="11" TextWrapping="Wrap" Margin="0 4 0 0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Actions -->
+                        <TextBlock Classes="section" Text="Actions" IsVisible="{Binding SupportsMonitor}"/>
+                        <Button Command="{Binding OpenMonitorCommand}" Content="Open monitor…"
+                                IsVisible="{Binding SupportsMonitor}"/>
+
+                        <!-- Export (Avalonia's storage provider — a native dialog on desktop, a download in the browser) -->
+                        <TextBlock Classes="section" Text="Export"/>
+                        <Button Command="{Binding ExportAllCommand}" Content="Export all (single image)…"/>
+                        <Button Command="{Binding ExportEachCommand}" Content="Export each cut (folder)…"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Right: reusable printer-state panel -->
+            <Border DockPanel.Dock="Right" Background="#3b3b3b" Width="220">
+                <controls:PrinterStatePanel State="{Binding State}"/>
+            </Border>
+
+            <!-- Center: reusable receipt viewer -->
+            <controls:ReceiptView Name="Receipts" Receipts="{Binding Receipts}"/>
+        </DockPanel>
+
+        <!-- Transient toast for buzzer / cash-drawer events -->
+        <Border IsVisible="{Binding ToastVisible}"
+                HorizontalAlignment="Center" VerticalAlignment="Top"
+                Margin="0 24 0 0" Padding="20 12"
+                Background="#E6202020" CornerRadius="8"
+                BoxShadow="0 4 16 0 #80000000" IsHitTestVisible="False">
+            <TextBlock Text="{Binding ToastMessage}" Foreground="White" FontSize="16" FontWeight="SemiBold"/>
+        </Border>
+
+        <!-- In-page Monitor overlay (browser hosts the Monitor here; desktop opens a window instead) -->
+        <Grid IsVisible="{Binding IsMonitorOpen}" Background="#99000000">
+            <Border HorizontalAlignment="Right" Width="440" Background="#262626" BoxShadow="-4 0 24 0 #80000000">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Background="#1f1f1f">
+                        <TextBlock Grid.Column="0" Text="ESC/POS Monitor (client)" Foreground="White"
+                                   FontWeight="Bold" Margin="12" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="✕ Close" Command="{Binding CloseMonitorCommand}" Margin="8"/>
+                    </Grid>
+                    <views:MonitorView DataContext="{Binding Monitor}"/>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -13,3 +13,6 @@ last_*.txt
 
 # macOS
 .DS_Store
+
+# Generated: the host publishes the Avalonia WASM client here on first build.
+samples/CrossEscPos.Host/wwwroot/

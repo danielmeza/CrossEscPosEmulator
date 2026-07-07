@@ -215,16 +215,19 @@ write to `COM4`.
 ### Monitor (built-in test client)
 
 Sending test jobs is the **monitor's** job — the emulator is the device, the monitor is the POS-side
-client that drives it over the wire (just like a real application would). Click **Open monitor…** to
-launch a second window (built on [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) and pick a
-transport:
+client that drives it over the wire (just like a real application would). The Monitor is **shared** by
+both heads: click **Open monitor…** to launch it — a window on desktop, an in-page overlay in the
+browser. Its test jobs and status display are identical; only the transport differs:
 
-- **TCP/IP** — connect to the emulator's listener (or any networked printer).
-- **Serial** — pick a port + baud; pairs with the emulator's serial transport via a virtual port bridge.
-- **USB** — print **directly to a real USB printer** selected from the connected-device list (by
-  VID:PID), via libusb. This is send-only (no status), and needs native **libusb** installed
-  (macOS `brew install libusb`, Debian/Ubuntu `apt install libusb-1.0-0`; bundled on Windows) and the
-  OS not already holding the device.
+- **Desktop** (built on [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) — pick a transport:
+  - **TCP/IP** — connect to the emulator's listener (or any networked printer).
+  - **Serial** — pick a port + baud; pairs with the emulator's serial transport via a virtual port bridge.
+  - **USB** — print **directly to a real USB printer** selected from the connected-device list (by
+    VID:PID), via libusb. This is send-only (no status), and needs native **libusb** installed
+    (macOS `brew install libusb`, Debian/Ubuntu `apt install libusb-1.0-0`; bundled on Windows) and the
+    OS not already holding the device.
+- **Browser** — sends over the **SignalR proxy** (the `CrossEscPos.Host` hub) to the in-page emulator,
+  for a full round-trip without any native transport.
 
 It then lets you exercise the target without writing any code:
 
@@ -278,8 +281,8 @@ new SkiaImageEncoder().EncodePng(image, outputStream);
 ```
 
 📦 **Package usage guides:** [`docs/packages/`](docs/packages/README.md) — getting started, the core
-emulator, rendering & custom backends (Skia + managed ImageSharp), the Avalonia controls, the
-transports, and the [**Blazor web app**](docs/packages/web.md) for rendering ESC/POS in the browser.
+emulator, rendering & custom backends (Skia + managed ImageSharp), the Avalonia controls, and the
+transports. The desktop and browser apps are one shared Avalonia app ([`src/CrossEscPos.App`](src/CrossEscPos.App)).
 
 📖 **Full reference & guides:** the [**project wiki**](https://github.com/danielmeza/CrossEscPosEmulator/wiki),
 including a step-by-step [**Adding a render backend**](https://github.com/danielmeza/CrossEscPosEmulator/wiki/Adding-a-Render-Backend) guide.
@@ -296,21 +299,34 @@ dotnet run --project src/CrossEscPos.App.Desktop
 # Headless: ESC/POS bytes -> PNG, no UI, no Avalonia
 dotnet run --project samples/CrossEscPos.Headless -- test_receipt.txt out.png
 
-# Browser (Avalonia WASM head): launches a dev server and opens the app
+# Browser: the SAME app in the browser (Avalonia WASM head) — full parity with desktop
 dotnet run --project src/CrossEscPos.App.Browser
 
-# Blazor web emulator: pick the render engine (managed ImageSharp by default), render ESC/POS
-# in the browser, and drive the printer state — the managed-backend showcase
-dotnet run --project samples/CrossEscPos.Web
+# Web host: serves the browser app AND the SignalR broker on one origin, giving it TCP reception
+# (browsers can't open raw sockets). First run publishes the WASM app into wwwroot (cached after).
+# Browse to the printed URL; the emulator opens the TCP port itself.
+dotnet run --project samples/CrossEscPos.Host
 
 # Tests (unit + headless UI)
 dotnet test CrossEscPos.slnx
 ```
 
-The **Blazor web app** ([`samples/CrossEscPos.Web`](samples/CrossEscPos.Web)) renders receipts entirely
-in the browser and lets you switch the render engine at runtime — **ImageSharp (managed)** by default
-(no native relink) or **SkiaSharp (native)**. It mirrors the desktop `ReceiptView` / `PrinterStatePanel`
-as Razor components. Paste ESC/POS text, upload a file, or load the bundled sample.
+**One app, two heads.** The desktop and browser apps are the **same** Avalonia application
+([`src/CrossEscPos.App`](src/CrossEscPos.App)) — the same views, view models, receipts, printer-state
+panel, PNG export, and the Monitor test-client. Only the platform edges differ, injected via
+`IPlatformServices`:
+
+| | Desktop head | Browser head |
+|---|---|---|
+| Transports | TCP + serial | **Web Serial + WebUSB + SignalR TCP proxy** |
+| Export | native save dialog | browser **download** (same Avalonia storage API) |
+| Monitor | test-client **window** | in-page **overlay** (SignalR round-trip) |
+
+A browser can't open a raw **TCP** listen socket, so the browser head connects over **SignalR** to
+[`samples/CrossEscPos.Host`](samples/CrossEscPos.Host) — one ASP.NET Core host that serves the WASM app
+*and* runs the broker. The emulator asks the host to open a TCP listener on the address:port you choose;
+POS software connects there and its jobs bridge to the in-page emulator, with status flowing back. The
+same hub carries the browser Monitor's jobs, so it round-trips against the in-page emulator too.
 
 - **Windows / macOS:** no extra setup — native rendering libraries ship with the Avalonia packages.
 - **Linux:** install the usual font/render native deps if they are missing, e.g.

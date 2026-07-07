@@ -20,13 +20,18 @@
 
   <!--
     One host = the whole browser experience: it serves the Avalonia WASM app (published into wwwroot)
-    AND hosts the SignalR broker + TCP:9100 bridge, all on one origin (so the browser talks to /bridge
-    with no CORS). The WASM head targets net10.0-browser, which a net10.0 host cannot ProjectReference
-    (unlike Blazor's hosted template), so we publish it into wwwroot instead. Trimming is disabled for
-    the client publish (Ardalis.SmartEnum trips the IL trimmer). Delete wwwroot to force a refresh.
+    AND hosts the SignalR broker, all on one origin (so the browser talks to /bridge with no CORS). The
+    WASM head targets net10.0-browser, which a net10.0 host cannot ProjectReference (unlike Blazor's
+    hosted template), so we publish it into wwwroot instead. Trimming is disabled for the client publish
+    (Ardalis.SmartEnum trips the IL trimmer).
+
+    Opt-in via -p:PublishWasmClient=true so a plain/solution/CI build never kicks off this nested publish
+    (which would rebuild the shared libs concurrently with the outer build and race on their obj output).
+    Run or publish the host with the flag once; wwwroot is then cached until you delete it to refresh:
+    "dotnet run -p:PublishWasmClient=true" (or "dotnet publish -p:PublishWasmClient=true -c Release").
   -->
   <Target Name="PublishWasmClient" BeforeTargets="Build"
-          Condition="!Exists('$(MSBuildThisFileDirectory)wwwroot\_framework\dotnet.js')">
+          Condition="'$(PublishWasmClient)' == 'true' and !Exists('$(MSBuildThisFileDirectory)wwwroot\_framework\dotnet.js')">
     <PropertyGroup>
       <WasmClientProj>$(MSBuildThisFileDirectory)..\..\src\CrossEscPos.App.Browser\CrossEscPos.App.Browser.csproj</WasmClientProj>
       <WasmClientOut>$(IntermediateOutputPath)wasmclient\</WasmClientOut>

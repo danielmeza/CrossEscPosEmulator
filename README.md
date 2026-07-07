@@ -215,16 +215,19 @@ write to `COM4`.
 ### Monitor (built-in test client)
 
 Sending test jobs is the **monitor's** job — the emulator is the device, the monitor is the POS-side
-client that drives it over the wire (just like a real application would). Click **Open monitor…** to
-launch a second window (built on [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) and pick a
-transport:
+client that drives it over the wire (just like a real application would). The Monitor is **shared** by
+both heads: click **Open monitor…** to launch it — a window on desktop, an in-page overlay in the
+browser. Its test jobs and status display are identical; only the transport differs:
 
-- **TCP/IP** — connect to the emulator's listener (or any networked printer).
-- **Serial** — pick a port + baud; pairs with the emulator's serial transport via a virtual port bridge.
-- **USB** — print **directly to a real USB printer** selected from the connected-device list (by
-  VID:PID), via libusb. This is send-only (no status), and needs native **libusb** installed
-  (macOS `brew install libusb`, Debian/Ubuntu `apt install libusb-1.0-0`; bundled on Windows) and the
-  OS not already holding the device.
+- **Desktop** (built on [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) — pick a transport:
+  - **TCP/IP** — connect to the emulator's listener (or any networked printer).
+  - **Serial** — pick a port + baud; pairs with the emulator's serial transport via a virtual port bridge.
+  - **USB** — print **directly to a real USB printer** selected from the connected-device list (by
+    VID:PID), via libusb. This is send-only (no status), and needs native **libusb** installed
+    (macOS `brew install libusb`, Debian/Ubuntu `apt install libusb-1.0-0`; bundled on Windows) and the
+    OS not already holding the device.
+- **Browser** — sends over the **SignalR proxy** (the `CrossEscPos.Host` hub) to the in-page emulator,
+  for a full round-trip without any native transport.
 
 It then lets you exercise the target without writing any code:
 
@@ -299,8 +302,9 @@ dotnet run --project samples/CrossEscPos.Headless -- test_receipt.txt out.png
 # Browser: the SAME app in the browser (Avalonia WASM head) — full parity with desktop
 dotnet run --project src/CrossEscPos.App.Browser
 
-# WebSocket↔TCP proxy: gives the browser app TCP:9100 reception (browsers can't open raw sockets)
-dotnet run --project samples/CrossEscPos.WsProxy
+# Web host: serves the browser app AND the SignalR broker on one origin, giving it TCP reception
+# (browsers can't open raw sockets). Browse to the printed URL; the emulator opens the TCP port itself.
+dotnet run --project samples/CrossEscPos.Host
 
 # Tests (unit + headless UI)
 dotnet test CrossEscPos.slnx
@@ -308,17 +312,20 @@ dotnet test CrossEscPos.slnx
 
 **One app, two heads.** The desktop and browser apps are the **same** Avalonia application
 ([`src/CrossEscPos.App`](src/CrossEscPos.App)) — the same views, view models, receipts, printer-state
-panel, and PNG export. Only the platform edges differ, injected via `IPlatformServices`:
+panel, PNG export, and the Monitor test-client. Only the platform edges differ, injected via
+`IPlatformServices`:
 
 | | Desktop head | Browser head |
 |---|---|---|
-| Transports | TCP + serial | **Web Serial + WebUSB + WebSocket** |
+| Transports | TCP + serial | **Web Serial + WebUSB + SignalR TCP proxy** |
 | Export | native save dialog | browser **download** (same Avalonia storage API) |
-| Extras | Monitor test-client window | — |
+| Monitor | test-client **window** | in-page **overlay** (SignalR round-trip) |
 
-A browser can't open a raw **TCP:9100** listen socket, so the browser head connects over **WebSocket**
-to [`samples/CrossEscPos.WsProxy`](samples/CrossEscPos.WsProxy), which listens on TCP:9100 like a real
-network printer and bridges each POS connection to the emulator.
+A browser can't open a raw **TCP** listen socket, so the browser head connects over **SignalR** to
+[`samples/CrossEscPos.Host`](samples/CrossEscPos.Host) — one ASP.NET Core host that serves the WASM app
+*and* runs the broker. The emulator asks the host to open a TCP listener on the address:port you choose;
+POS software connects there and its jobs bridge to the in-page emulator, with status flowing back. The
+same hub carries the browser Monitor's jobs, so it round-trips against the in-page emulator too.
 
 - **Windows / macOS:** no extra setup — native rendering libraries ship with the Avalonia packages.
 - **Linux:** install the usual font/render native deps if they are missing, e.g.

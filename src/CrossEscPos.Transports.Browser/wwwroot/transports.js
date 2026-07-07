@@ -86,7 +86,8 @@
     let port = null, reader = null, keep = false;
     // Supported natively (Chromium) or emulated over WebUSB anywhere WebUSB exists.
     const isSupported = () => ('serial' in navigator) || ('usb' in navigator);
-    async function connect() {
+    async function connect(options) {
+      const baud = parseInt(options, 10) || 9600;
       let sel, via = '';
       if ('serial' in navigator) {
         try { sel = await navigator.serial.requestPort(); } catch { return null; }
@@ -94,10 +95,10 @@
         let dev; try { dev = await navigator.usb.requestDevice({ filters: [] }); } catch { return null; }
         sel = usbSerialPort(dev); via = ' (via WebUSB)';
       } else { return null; }
-      try { await sel.open({ baudRate: 9600 }); } catch { return null; }
+      try { await sel.open({ baudRate: baud }); } catch { return null; }
       port = sel; keep = true; loop();
       const info = sel.getInfo ? sel.getInfo() : {};
-      return `Serial port${info.usbVendorId ? ` (VID 0x${info.usbVendorId.toString(16)})` : ''} @ 9600 baud${via}`;
+      return `Serial port${info.usbVendorId ? ` (VID 0x${info.usbVendorId.toString(16)})` : ''} @ ${baud} baud${via}`;
     }
     async function loop() {
       while (port && port.readable && keep) {
@@ -170,7 +171,7 @@
   const impl = (kind) => (kind === 'usb' ? usb : serial);
 
   cx.isSupported = (kind) => impl(kind).isSupported();
-  cx.connect = (kind) => impl(kind).connect();
+  cx.connect = (kind, options) => impl(kind).connect(options);
   cx.write = (kind, payload) => impl(kind).write(payload);
   cx.disconnect = (kind) => impl(kind).disconnect();
 })();

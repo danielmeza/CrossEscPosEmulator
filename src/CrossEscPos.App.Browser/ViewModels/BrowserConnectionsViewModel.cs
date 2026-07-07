@@ -25,6 +25,7 @@ public partial class BrowserConnectionsViewModel : ObservableObject, ITransportS
     public bool SerialSupported { get; private set; }
     public bool UsbSupported { get; private set; }
 
+    [ObservableProperty] private string _serialBaud = "9600";
     [ObservableProperty] private string _wsUrl = "ws://localhost:5000/ws";
 
     public BrowserConnectionsViewModel(ReceiptPrinter printer)
@@ -46,7 +47,13 @@ public partial class BrowserConnectionsViewModel : ObservableObject, ITransportS
     public string UsbButtonText => _usb.IsConnected ? "Disconnect" : "Connect";
     public string WsButtonText => _ws.IsConnected ? "Disconnect" : "Connect";
 
-    [RelayCommand] private Task ToggleSerial() => Toggle(_serial);
+    [RelayCommand]
+    private Task ToggleSerial()
+    {
+        _serial.Options = SerialBaud;   // baud rate for the port.open() / SET_LINE_CODING
+        return Toggle(_serial);
+    }
+
     [RelayCommand] private Task ToggleUsb() => Toggle(_usb);
 
     [RelayCommand]

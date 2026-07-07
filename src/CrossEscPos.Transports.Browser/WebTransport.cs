@@ -33,6 +33,9 @@ public class WebTransport : IReceiptTransport
     public bool IsConnected { get; private set; }
     public event Action? StateChanged;
 
+    /// <summary>Transport-specific connect hint passed to the bridge (for serial: the baud rate).</summary>
+    public string? Options { get; set; }
+
     public ValueTask<bool> IsSupportedAsync() => _bridge.IsSupportedAsync(_kindId);
 
     public async Task ConnectAsync()
@@ -40,7 +43,7 @@ public class WebTransport : IReceiptTransport
         if (IsConnected)
             return;
 
-        var description = await _bridge.ConnectAsync(_kindId);   // opens the picker (user gesture)
+        var description = await _bridge.ConnectAsync(_kindId, Options);   // opens the picker (user gesture)
         if (string.IsNullOrEmpty(description))
             return; // cancelled
 

@@ -15,8 +15,11 @@ public interface IJsTransportBridge
 {
     ValueTask<bool> IsSupportedAsync(string kind);
 
-    /// <summary>Opens the device picker and connects; returns a description, or <c>null</c> if cancelled.</summary>
-    ValueTask<string?> ConnectAsync(string kind);
+    /// <summary>
+    /// Opens the device picker and connects; returns a description, or <c>null</c> if cancelled.
+    /// <paramref name="options"/> is a transport-specific hint (for serial, the baud rate as a string).
+    /// </summary>
+    ValueTask<string?> ConnectAsync(string kind, string? options);
 
     ValueTask WriteAsync(string kind, byte[] data);
 

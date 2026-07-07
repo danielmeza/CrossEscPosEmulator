@@ -23,9 +23,9 @@ public sealed partial class WasmJsTransportBridge : IJsTransportBridge
 
     public ValueTask<bool> IsSupportedAsync(string kind) => ValueTask.FromResult(IsSupported(kind));
 
-    public async ValueTask<string?> ConnectAsync(string kind)
+    public async ValueTask<string?> ConnectAsync(string kind, string? options)
     {
-        var description = await Connect(kind);
+        var description = await Connect(kind, options ?? string.Empty);
         return string.IsNullOrEmpty(description) ? null : description;
     }
 
@@ -47,7 +47,7 @@ public sealed partial class WasmJsTransportBridge : IJsTransportBridge
     private static partial bool IsSupported(string kind);
 
     [JSImport("globalThis.crossescpos.connect")]
-    private static partial Task<string?> Connect(string kind);
+    private static partial Task<string?> Connect(string kind, string options);
 
     [JSImport("globalThis.crossescpos.write")]
     private static partial Task Write(string kind, string base64);

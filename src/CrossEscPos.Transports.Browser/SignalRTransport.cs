@@ -6,10 +6,11 @@ using Microsoft.AspNetCore.SignalR.Client;
 namespace CrossEscPos.Transports.Browser;
 
 /// <summary>
-/// Receives ESC/POS over a <b>SignalR</b> hub (the CrossEscPos.WsProxy broker). SignalR's client runs in
+/// Receives ESC/POS over a <b>SignalR</b> hub (the CrossEscPos.Host broker). SignalR's client runs in
 /// WASM over the browser WebSocket, so this works in the Avalonia browser head and on desktop alike. The
-/// emulator attaches as the "printer"; the proxy forwards each POS/monitor job to it and relays its
-/// status replies back. This is the TCP-in-the-browser path the sandbox otherwise forbids.
+/// emulator attaches as the "printer" and asks the proxy to open a TCP listener on <see cref="ListenAddress"/>:
+/// <see cref="ListenPort"/> for this session; POS software connects there and the proxy relays jobs to it
+/// and its status replies back. This is the TCP-in-the-browser path the sandbox otherwise forbids.
 /// </summary>
 public sealed class SignalRTransport : IReceiptTransport
 {
@@ -31,6 +32,12 @@ public sealed class SignalRTransport : IReceiptTransport
     /// <summary>The proxy hub endpoint, e.g. <c>http://localhost:5000/bridge</c>.</summary>
     public string Url { get; set; } = "http://localhost:5000/bridge";
 
+    /// <summary>Address the proxy should bind the per-session TCP listener to (default: all interfaces).</summary>
+    public string ListenAddress { get; set; } = "0.0.0.0";
+
+    /// <summary>TCP port the proxy should listen on for POS software (default: 9100).</summary>
+    public int ListenPort { get; set; } = 9100;
+
     public ValueTask<bool> IsSupportedAsync() => new(true);
 
     public async Task ConnectAsync()
@@ -43,21 +50,29 @@ public sealed class SignalRTransport : IReceiptTransport
         hub.Closed += _ => { OnClosed(); return Task.CompletedTask; };
 
         var server = new BridgeServerProxy(hub);
+        // Re-open the TCP listener after an automatic reconnect (the connection id changes).
+        hub.Reconnected += async _ =>
+        {
+            try { await server.AttachEmulator(ListenAddress, ListenPort); } catch { /* surfaces on next use */ }
+        };
+
         try
         {
             await hub.StartAsync();
-            await server.AttachEmulator();
+            await server.AttachEmulator(ListenAddress, ListenPort);
         }
-        catch
+        catch (Exception ex)
         {
             try { await hub.DisposeAsync(); } catch { }
-            return; // couldn't reach the proxy
+            Description = ex.Message; // e.g. "Could not listen on 0.0.0.0:9100 — port in use"
+            StateChanged?.Invoke();
+            return;
         }
 
         _hub = hub;
         _server = server;
         IsConnected = true;
-        Description = Url;
+        Description = $"{Url}  (TCP {ListenAddress}:{ListenPort})";
         _sink.Attach(this);
         StateChanged?.Invoke();
     }

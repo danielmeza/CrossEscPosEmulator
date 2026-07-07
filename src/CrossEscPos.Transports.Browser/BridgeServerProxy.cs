@@ -15,7 +15,8 @@ public sealed class BridgeServerProxy : IBridgeServer
 
     public BridgeServerProxy(HubConnection hub) => _hub = hub;
 
-    public Task AttachEmulator() => _hub.InvokeAsync(nameof(IBridgeServer.AttachEmulator));
+    public Task AttachEmulator(string address, int port)
+        => _hub.InvokeAsync(nameof(IBridgeServer.AttachEmulator), address, port);
     public Task SendToEmulator(byte[] data) => _hub.InvokeAsync(nameof(IBridgeServer.SendToEmulator), data);
     public Task ReplyToSender(byte[] data) => _hub.InvokeAsync(nameof(IBridgeServer.ReplyToSender), data);
 }

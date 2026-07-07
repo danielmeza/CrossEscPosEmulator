@@ -8,8 +8,12 @@ namespace CrossEscPos.Bridge;
 /// </summary>
 public interface IBridgeServer
 {
-    /// <summary>Register this connection as the printer (emulator) the proxy forwards jobs to.</summary>
-    Task AttachEmulator();
+    /// <summary>
+    /// Register this connection as the printer (emulator) and ask the proxy to open a TCP listener on
+    /// <paramref name="address"/>:<paramref name="port"/> for this session, so POS software can reach it.
+    /// Throws if the port can't be bound. The listener is torn down when the emulator disconnects.
+    /// </summary>
+    Task AttachEmulator(string address, int port);
 
     /// <summary>Send an ESC/POS job (from a monitor/POS) to the attached emulator.</summary>
     Task SendToEmulator(byte[] data);

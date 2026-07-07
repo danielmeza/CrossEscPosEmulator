@@ -47,13 +47,22 @@ public sealed class BrowserPlatformServices : IPlatformServices
         signalr.Url = bridgeUrl;
 
         var baud = new TransportField("Baud", "9600");
-        var url = new TransportField("Proxy URL", bridgeUrl);
+        var proxyUrl = new TransportField("Proxy URL", bridgeUrl);
+        var listenAddress = new TransportField("Listen address", "0.0.0.0");
+        var listenPort = new TransportField("Listen port", "9100");
 
         return new TransportEntry[]
         {
-            new ReceiptTransportEntry(serial, "Web Serial", baud, v => serial.Options = v),
+            new ReceiptTransportEntry(serial, "Web Serial", new[] { baud }, () => serial.Options = baud.Value),
             new ReceiptTransportEntry(usb, "WebUSB"),
-            new ReceiptTransportEntry(signalr, "TCP proxy (SignalR)", url, v => signalr.Url = v),
+            new ReceiptTransportEntry(signalr, "TCP proxy (SignalR)",
+                new[] { proxyUrl, listenAddress, listenPort },
+                () =>
+                {
+                    signalr.Url = proxyUrl.Value;
+                    signalr.ListenAddress = listenAddress.Value;
+                    signalr.ListenPort = int.TryParse(listenPort.Value, out var p) ? p : 9100;
+                }),
         };
     }
 

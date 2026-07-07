@@ -12,6 +12,9 @@
     <ProjectReference Include="..\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
     <ProjectReference Include="..\CrossEscPos.Core\CrossEscPos.Core.csproj" />
     <ProjectReference Include="..\CrossEscPos.Rendering.Skia\CrossEscPos.Rendering.Skia.csproj" />
+    <!-- Referenced so the app can switch to the managed backend at runtime via the "backend" arg,
+         for visual A/B testing against the default Skia backend. -->
+    <ProjectReference Include="..\CrossEscPos.Rendering.ImageSharp\CrossEscPos.Rendering.ImageSharp.csproj" />
     <ProjectReference Include="..\CrossEscPos.Transports\CrossEscPos.Transports.csproj" />
     <ProjectReference Include="..\CrossEscPos.Controls\CrossEscPos.Controls.csproj" />
   </ItemGroup>

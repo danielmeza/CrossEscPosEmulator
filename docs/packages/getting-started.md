@@ -9,7 +9,11 @@ dotnet add package CrossEscPos.Core
 dotnet add package CrossEscPos.Rendering.Skia
 ```
 
-(See the [package index](README.md#installing) for using local builds until these are on NuGet.)
+Prefer a **fully managed** backend (no native dependency — needed for Blazor WASM without a native
+relink)? Swap the render package for `CrossEscPos.Rendering.ImageSharp`; everything below is identical
+apart from the `Skia*` type names becoming `ImageSharp*`.
+
+(See the [package index](README.md#installing) for versions and local builds.)
 
 ## 2. Compose a printer and render
 
@@ -53,6 +57,8 @@ foreach (var receipt in printer.ReceiptStack)
 ## Where to go next
 
 - [Core](core.md) — printer state, status replies, events, code pages.
-- [Rendering](rendering.md) — exporting, stacking, and writing a custom backend.
+- [Rendering](rendering.md) — the Skia + ImageSharp backends, exporting, stacking, and writing your own.
 - [Controls](controls.md) — show receipts live in an Avalonia app.
 - [Transports](transports.md) — feed the printer over TCP/serial/USB instead of a file.
+- [Blazor web app](web.md) — render ESC/POS in the browser with the managed backend.
+- [Adding a render backend](https://github.com/danielmeza/CrossEscPosEmulator/wiki/Adding-a-Render-Backend) (wiki) — the full step-by-step guide.

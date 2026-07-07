@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Directory.Build.props sets RootNamespace=CrossEscPos for the shared type layout; this app
+         wants its own sub-namespace so Razor components land in CrossEscPos.Web.*. -->
+    <RootNamespace>CrossEscPos.Web</RootNamespace>
+    <!-- Blazor/Razor lean on implicit usings; the rest of the repo disables them. -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Sample app: generated Razor/interop code trips a few analyzer warnings that the library
+         projects don't, so don't fail the build on them (mirrors the old Wasm sample). -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <!-- SkiaSharp's WebAssembly native (libSkiaSharp.a) is a static lib linked into the runtime, so
+         the native wasm build step is required whenever the Skia engine is included. ImageSharp needs
+         none of this — it is why the managed backend is the default here. -->
+    <WasmBuildNative>true</WasmBuildNative>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.8" PrivateAssets="all" />
+    <!-- Native SkiaSharp for wasm; version tracks Rendering.Skia's SkiaSharp (3.119.4). -->
+    <PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="3.119.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Core + both render backends, so the engine is switchable at runtime. -->
+    <ProjectReference Include="..\..\src\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\CrossEscPos.Core\CrossEscPos.Core.csproj" />
+    <ProjectReference Include="..\..\src\CrossEscPos.Rendering.Skia\CrossEscPos.Rendering.Skia.csproj" />
+    <ProjectReference Include="..\..\src\CrossEscPos.Rendering.ImageSharp\CrossEscPos.Rendering.ImageSharp.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -278,9 +278,11 @@ new SkiaImageEncoder().EncodePng(image, outputStream);
 ```
 
 📦 **Package usage guides:** [`docs/packages/`](docs/packages/README.md) — getting started, the core
-emulator, rendering & custom backends, the Avalonia controls, the transports, and a
-[**WASM JavaScript interop**](docs/packages/wasm-interop.md) for rendering ESC/POS to PNG from any web
-project (no .NET on the caller's side).
+emulator, rendering & custom backends (Skia + managed ImageSharp), the Avalonia controls, the
+transports, and the [**Blazor web app**](docs/packages/web.md) for rendering ESC/POS in the browser.
+
+📖 **Full reference & guides:** the [**project wiki**](https://github.com/danielmeza/CrossEscPosEmulator/wiki),
+including a step-by-step [**Adding a render backend**](https://github.com/danielmeza/CrossEscPosEmulator/wiki/Adding-a-Render-Backend) guide.
 
 ### Building & running
 

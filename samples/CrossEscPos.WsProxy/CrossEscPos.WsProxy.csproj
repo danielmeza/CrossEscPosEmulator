@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Minimal-API top-level program relies on the Web SDK's implicit global usings. -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Small dev tool: don't fail on minor analyzer warnings. -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

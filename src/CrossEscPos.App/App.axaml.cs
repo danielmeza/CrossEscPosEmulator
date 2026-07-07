@@ -33,6 +33,7 @@ public partial class App : Application
 
         var viewModel = new MainViewModel(printer, platform);
         var mainView = new MainView { DataContext = viewModel };
+        platform.AttachRoot(mainView);
 
         switch (ApplicationLifetime)
         {

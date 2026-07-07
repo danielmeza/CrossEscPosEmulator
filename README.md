@@ -278,8 +278,8 @@ new SkiaImageEncoder().EncodePng(image, outputStream);
 ```
 
 📦 **Package usage guides:** [`docs/packages/`](docs/packages/README.md) — getting started, the core
-emulator, rendering & custom backends (Skia + managed ImageSharp), the Avalonia controls, the
-transports, and the [**Blazor web app**](docs/packages/web.md) for rendering ESC/POS in the browser.
+emulator, rendering & custom backends (Skia + managed ImageSharp), the Avalonia controls, and the
+transports. The desktop and browser apps are one shared Avalonia app ([`src/CrossEscPos.App`](src/CrossEscPos.App)).
 
 📖 **Full reference & guides:** the [**project wiki**](https://github.com/danielmeza/CrossEscPosEmulator/wiki),
 including a step-by-step [**Adding a render backend**](https://github.com/danielmeza/CrossEscPosEmulator/wiki/Adding-a-Render-Backend) guide.
@@ -296,21 +296,29 @@ dotnet run --project src/CrossEscPos.App.Desktop
 # Headless: ESC/POS bytes -> PNG, no UI, no Avalonia
 dotnet run --project samples/CrossEscPos.Headless -- test_receipt.txt out.png
 
-# Browser (Avalonia WASM head): launches a dev server and opens the app
+# Browser: the SAME app in the browser (Avalonia WASM head) — full parity with desktop
 dotnet run --project src/CrossEscPos.App.Browser
 
-# Blazor web emulator: pick the render engine (managed ImageSharp by default), render ESC/POS
-# in the browser, and drive the printer state — the managed-backend showcase
-dotnet run --project samples/CrossEscPos.Web
+# WebSocket↔TCP proxy: gives the browser app TCP:9100 reception (browsers can't open raw sockets)
+dotnet run --project samples/CrossEscPos.WsProxy
 
 # Tests (unit + headless UI)
 dotnet test CrossEscPos.slnx
 ```
 
-The **Blazor web app** ([`samples/CrossEscPos.Web`](samples/CrossEscPos.Web)) renders receipts entirely
-in the browser and lets you switch the render engine at runtime — **ImageSharp (managed)** by default
-(no native relink) or **SkiaSharp (native)**. It mirrors the desktop `ReceiptView` / `PrinterStatePanel`
-as Razor components. Paste ESC/POS text, upload a file, or load the bundled sample.
+**One app, two heads.** The desktop and browser apps are the **same** Avalonia application
+([`src/CrossEscPos.App`](src/CrossEscPos.App)) — the same views, view models, receipts, printer-state
+panel, and PNG export. Only the platform edges differ, injected via `IPlatformServices`:
+
+| | Desktop head | Browser head |
+|---|---|---|
+| Transports | TCP + serial | **Web Serial + WebUSB + WebSocket** |
+| Export | native save dialog | browser **download** (same Avalonia storage API) |
+| Extras | Monitor test-client window | — |
+
+A browser can't open a raw **TCP:9100** listen socket, so the browser head connects over **WebSocket**
+to [`samples/CrossEscPos.WsProxy`](samples/CrossEscPos.WsProxy), which listens on TCP:9100 like a real
+network printer and bridges each POS connection to the emulator.
 
 - **Windows / macOS:** no extra setup — native rendering libraries ship with the Avalonia packages.
 - **Linux:** install the usual font/render native deps if they are missing, e.g.

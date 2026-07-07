@@ -60,6 +60,8 @@ public sealed class DesktopPlatformServices : IPlatformServices
         _monitorWindow.Show();
     }
 
+    public void AttachRoot(Control mainView) => _dialogs.AttachControl(mainView);
+
     public Window CreateMainWindow(Control content)
     {
         var window = new MainWindow

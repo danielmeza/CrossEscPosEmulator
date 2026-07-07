@@ -38,6 +38,12 @@ public interface IPlatformServices
     /// <summary>Opens the Monitor window (desktop only; no-op elsewhere).</summary>
     void OpenMonitor();
 
+    /// <summary>
+    /// Called with the shared main view once created, so the platform can wire top-level-dependent
+    /// services (e.g. the export dialog resolves its <c>TopLevel</c> from this control).
+    /// </summary>
+    void AttachRoot(Control mainView);
+
     /// <summary>Wraps the shared main view in the platform's top-level window (desktop only).</summary>
     Window CreateMainWindow(Control content);
 

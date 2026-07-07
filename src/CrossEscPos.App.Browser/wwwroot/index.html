@@ -8,6 +8,8 @@
 </head>
 <body>
     <div id="out"></div>
+    <!-- Shared browser transports (Web Serial / WebUSB); classic script runs before the deferred module. -->
+    <script src="./transports.js"></script>
     <script type="module" src="./main.js"></script>
 </body>
 </html>

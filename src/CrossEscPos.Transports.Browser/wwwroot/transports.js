@@ -174,4 +174,7 @@
   cx.connect = (kind, options) => impl(kind).connect(options);
   cx.write = (kind, payload) => impl(kind).write(payload);
   cx.disconnect = (kind) => impl(kind).disconnect();
+
+  // The page's origin, so the SignalR TCP-proxy transport defaults to the same host that served the app.
+  cx.origin = () => globalThis.location.origin;
 })();

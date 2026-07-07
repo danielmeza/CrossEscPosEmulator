@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:CrossEscPos.App.ViewModels"
              xmlns:tr="using:CrossEscPos.App.Transports"
+             xmlns:views="using:CrossEscPos.App.Views"
              xmlns:controls="using:CrossEscPos.Controls"
              mc:Ignorable="d" d:DesignWidth="1120" d:DesignHeight="820"
              x:Class="CrossEscPos.App.Views.MainView"
@@ -99,5 +100,19 @@
                 BoxShadow="0 4 16 0 #80000000" IsHitTestVisible="False">
             <TextBlock Text="{Binding ToastMessage}" Foreground="White" FontSize="16" FontWeight="SemiBold"/>
         </Border>
+
+        <!-- In-page Monitor overlay (browser hosts the Monitor here; desktop opens a window instead) -->
+        <Grid IsVisible="{Binding IsMonitorOpen}" Background="#99000000">
+            <Border HorizontalAlignment="Right" Width="440" Background="#262626" BoxShadow="-4 0 24 0 #80000000">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Background="#1f1f1f">
+                        <TextBlock Grid.Column="0" Text="ESC/POS Monitor (client)" Foreground="White"
+                                   FontWeight="Bold" Margin="12" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="✕ Close" Command="{Binding CloseMonitorCommand}" Margin="8"/>
+                    </Grid>
+                    <views:MonitorView DataContext="{Binding Monitor}"/>
+                </DockPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

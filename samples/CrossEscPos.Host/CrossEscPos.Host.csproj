@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Minimal-API top-level program relies on the Web SDK's implicit global usings. -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- UseBlazorFrameworkFiles(): serves the WASM _framework assets (webcil, .br/.gz negotiation).
+         Works for any Microsoft.NET.Sdk.WebAssembly app, not just Blazor. -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Strongly-typed hub contracts shared with the WASM clients. -->
+    <ProjectReference Include="..\..\src\CrossEscPos.Bridge\CrossEscPos.Bridge.csproj" />
+  </ItemGroup>
+
+  <!--
+    One host = the whole browser experience: it serves the Avalonia WASM app (published into wwwroot)
+    AND hosts the SignalR broker + TCP:9100 bridge, all on one origin (so the browser talks to /bridge
+    with no CORS). The WASM head targets net10.0-browser, which a net10.0 host cannot ProjectReference
+    (unlike Blazor's hosted template), so we publish it into wwwroot instead. Trimming is disabled for
+    the client publish (Ardalis.SmartEnum trips the IL trimmer). Delete wwwroot to force a refresh.
+  -->
+  <Target Name="PublishWasmClient" BeforeTargets="Build"
+          Condition="!Exists('$(MSBuildThisFileDirectory)wwwroot\_framework\dotnet.js')">
+    <PropertyGroup>
+      <WasmClientProj>$(MSBuildThisFileDirectory)..\..\src\CrossEscPos.App.Browser\CrossEscPos.App.Browser.csproj</WasmClientProj>
+      <WasmClientOut>$(IntermediateOutputPath)wasmclient\</WasmClientOut>
+    </PropertyGroup>
+    <Message Importance="high" Text="Publishing the Avalonia WASM client into the host wwwroot (first build)…" />
+    <RemoveDir Directories="$(WasmClientOut)" />
+    <MSBuild Projects="$(WasmClientProj)" Targets="Publish"
+             Properties="Configuration=$(Configuration);PublishTrimmed=false;PublishDir=$(WasmClientOut)" />
+    <ItemGroup>
+      <WasmAssets Include="$(WasmClientOut)wwwroot\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(WasmAssets)"
+          DestinationFiles="@(WasmAssets->'$(MSBuildThisFileDirectory)wwwroot\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

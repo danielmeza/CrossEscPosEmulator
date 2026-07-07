@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Shared SignalR bridge contracts (server + client interfaces). Dependency-free so both the
+         net10.0 host and the WASM transport clients reference the same strongly-typed method names. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

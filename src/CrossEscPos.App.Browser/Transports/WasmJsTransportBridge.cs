@@ -33,6 +33,13 @@ public sealed partial class WasmJsTransportBridge : IJsTransportBridge
 
     public ValueTask DisconnectAsync(string kind) => new(Disconnect(kind));
 
+    /// <summary>The page origin (e.g. <c>http://localhost:5000</c>) that served the app.</summary>
+    public static string PageOrigin()
+    {
+        try { return Origin(); }
+        catch { return string.Empty; }
+    }
+
     // JS -> .NET delivery (base64). Wired from main.js.
     [JSExport]
     internal static void DeliverData(string kind, string base64)
@@ -54,4 +61,7 @@ public sealed partial class WasmJsTransportBridge : IJsTransportBridge
 
     [JSImport("globalThis.crossescpos.disconnect")]
     private static partial Task Disconnect(string kind);
+
+    [JSImport("globalThis.crossescpos.origin")]
+    private static partial string Origin();
 }

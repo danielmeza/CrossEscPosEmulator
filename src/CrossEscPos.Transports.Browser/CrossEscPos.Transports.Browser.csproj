@@ -9,6 +9,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CrossEscPos.Abstractions\CrossEscPos.Abstractions.csproj" />
+    <ProjectReference Include="..\CrossEscPos.Bridge\CrossEscPos.Bridge.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SignalR client for the TCP-proxy transport (works in WASM over the browser WebSocket). -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.8" />
   </ItemGroup>
 
 </Project>

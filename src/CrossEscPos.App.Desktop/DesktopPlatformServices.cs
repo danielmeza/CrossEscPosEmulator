@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using Avalonia.Controls;
 using CrossEscPos.App;
+using CrossEscPos.App.Desktop.Monitor;
 using CrossEscPos.App.Desktop.Transports;
-using CrossEscPos.App.Desktop.ViewModels;
 using CrossEscPos.App.Desktop.Views;
+using CrossEscPos.App.Monitor;
 using CrossEscPos.App.Transports;
 using CrossEscPos.Controls.Services;
 using CrossEscPos.Emulator;
@@ -47,19 +48,18 @@ public sealed class DesktopPlatformServices : IPlatformServices
         return new TransportEntry[] { _tcp, serial };
     }
 
-    public bool SupportsMonitor => true;
+    public IMonitorClient CreateMonitorClient() => new DesktopMonitorClient(_tcp?.CurrentPort ?? 9100);
 
-    public void OpenMonitor()
+    public bool MonitorInWindow => true;
+
+    public void ShowMonitorWindow(MonitorViewModel monitor)
     {
         if (_monitorWindow is not null)
         {
             _monitorWindow.Activate();
             return;
         }
-        _monitorWindow = new MonitorWindow
-        {
-            DataContext = new MonitorWindowViewModel(_tcp?.CurrentPort ?? 9100)
-        };
+        _monitorWindow = new MonitorWindow { DataContext = monitor };
         _monitorWindow.Closed += (_, _) => _monitorWindow = null;
         _monitorWindow.Show();
     }

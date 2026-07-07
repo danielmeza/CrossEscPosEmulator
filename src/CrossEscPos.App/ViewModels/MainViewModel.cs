@@ -14,6 +14,7 @@ using CrossEscPos.Controls.Services;
 using CrossEscPos.Emulator;
 using CrossEscPos.Emulator.Rendering;
 using CrossEscPos.Graphics;
+using CrossEscPos.App.Monitor;
 
 namespace CrossEscPos.App.ViewModels;
 
@@ -53,12 +54,16 @@ public partial class MainViewModel : ObservableObject
     /// <summary>The platform's transports, rendered uniformly by the shared connections view.</summary>
     public IReadOnlyList<Transports.TransportEntry> Transports { get; }
 
-    public bool SupportsMonitor => _platform.SupportsMonitor;
+    /// <summary>The shared Monitor test-client, or null if the platform has no Monitor.</summary>
+    public MonitorViewModel? Monitor { get; }
+    public bool SupportsMonitor => Monitor is not null;
     public string BackendName => _platform.BackendName;
 
     [ObservableProperty] private string _input = DefaultInput;
     [ObservableProperty] private string _toastMessage = string.Empty;
     [ObservableProperty] private bool _toastVisible;
+    /// <summary>Browser only: shows the Monitor as an in-page overlay (desktop uses a window instead).</summary>
+    [ObservableProperty] private bool _isMonitorOpen;
 
     /// <summary>Raised on the UI thread after receipts change (the view scrolls to the newest).</summary>
     public event EventHandler? ReceiptsUpdated;
@@ -81,6 +86,9 @@ public partial class MainViewModel : ObservableObject
         _printer.OnPrintBlocked += reason => Dispatcher.UIThread.Post(() => ShowToast($"🚫  {reason} — print dropped"));
 
         Transports = platform.CreateTransports(printer);
+
+        if (platform.CreateMonitorClient() is { } monitorClient)
+            Monitor = new MonitorViewModel(monitorClient);
 
         Render(); // render the default input so the app shows something on launch
     }
@@ -112,7 +120,18 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenMonitor() => _platform.OpenMonitor();
+    private void OpenMonitor()
+    {
+        if (Monitor is null)
+            return;
+        if (_platform.MonitorInWindow)
+            _platform.ShowMonitorWindow(Monitor);
+        else
+            IsMonitorOpen = true; // in-page overlay (browser)
+    }
+
+    [RelayCommand]
+    private void CloseMonitor() => IsMonitorOpen = false;
 
     private void ResetPrinter()
     {
@@ -176,6 +195,7 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Called on shutdown — stop every transport.</summary>
     public void Shutdown()
     {
+        Monitor?.Shutdown();
         foreach (var transport in Transports)
             transport.Shutdown();
     }

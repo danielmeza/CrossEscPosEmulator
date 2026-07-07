@@ -33,11 +33,18 @@ public interface IPlatformServices
     /// </summary>
     IReadOnlyList<Transports.TransportEntry> CreateTransports(ReceiptPrinter printer);
 
-    /// <summary>Whether this platform offers the separate Monitor test-client window (desktop only).</summary>
-    bool SupportsMonitor { get; }
+    /// <summary>
+    /// Creates the platform's Monitor transport (desktop: TCP/serial/USB over ESC-POS-.NET; browser:
+    /// SignalR to the host's proxy hub), or null if the platform has no Monitor. The shared Monitor view
+    /// + test-job generation are platform-agnostic.
+    /// </summary>
+    Monitor.IMonitorClient? CreateMonitorClient();
 
-    /// <summary>Opens the Monitor window (desktop only; no-op elsewhere).</summary>
-    void OpenMonitor();
+    /// <summary>Whether the Monitor opens in its own window (desktop) or an in-page panel (browser).</summary>
+    bool MonitorInWindow { get; }
+
+    /// <summary>Opens the Monitor in a platform window (desktop only; unused when it hosts in-page).</summary>
+    void ShowMonitorWindow(Monitor.MonitorViewModel monitor);
 
     /// <summary>
     /// Called with the shared main view once created, so the platform can wire top-level-dependent

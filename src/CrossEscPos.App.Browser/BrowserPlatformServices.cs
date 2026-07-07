@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using Avalonia.Controls;
 using CrossEscPos.App;
+using CrossEscPos.App.Browser.Monitor;
 using CrossEscPos.App.Browser.Transports;
+using CrossEscPos.App.Monitor;
 using CrossEscPos.App.Transports;
 using CrossEscPos.Controls.Services;
 using CrossEscPos.Emulator;
@@ -37,21 +39,29 @@ public sealed class BrowserPlatformServices : IPlatformServices
         var bridge = new WasmJsTransportBridge();
         var serial = new WebTransport(bridge, sink, "serial", "Web Serial");
         var usb = new WebTransport(bridge, sink, "usb", "WebUSB");
-        var ws = new WebSocketTransport(sink, "WebSocket");
+        var signalr = new SignalRTransport(sink, "SignalR");
+
+        // Default the proxy to the same origin that served the app (the CrossEscPos.Host).
+        var origin = WasmJsTransportBridge.PageOrigin();
+        var bridgeUrl = (string.IsNullOrEmpty(origin) ? "http://localhost:5000" : origin) + "/bridge";
+        signalr.Url = bridgeUrl;
 
         var baud = new TransportField("Baud", "9600");
-        var url = new TransportField("URL", "ws://localhost:5000/ws");
+        var url = new TransportField("Proxy URL", bridgeUrl);
 
         return new TransportEntry[]
         {
             new ReceiptTransportEntry(serial, "Web Serial", baud, v => serial.Options = v),
             new ReceiptTransportEntry(usb, "WebUSB"),
-            new ReceiptTransportEntry(ws, "WebSocket (TCP proxy)", url, v => ws.Url = v),
+            new ReceiptTransportEntry(signalr, "TCP proxy (SignalR)", url, v => signalr.Url = v),
         };
     }
 
-    public bool SupportsMonitor => false;
-    public void OpenMonitor() { }
+    public IMonitorClient CreateMonitorClient() => new SignalRMonitorClient();
+
+    public bool MonitorInWindow => false; // the browser hosts the Monitor as an in-page overlay
+
+    public void ShowMonitorWindow(MonitorViewModel monitor) { /* unused; browser hosts in-page */ }
 
     public void AttachRoot(Control mainView) => _dialogs.AttachControl(mainView);
 

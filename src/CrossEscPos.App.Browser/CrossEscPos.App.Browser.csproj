@@ -5,8 +5,6 @@
     <OutputType>Exe</OutputType>
     <!-- [JSImport]/[JSExport] source generators require unsafe code. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- Generated browser interop glue trips analyzer warnings; don't fail the WASM head on them. -->
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

@@ -23,12 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="test_receipt.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <!-- App icon embedded as an Avalonia resource so the window can load it at runtime. -->
     <AvaloniaResource Include="Assets/Icon/icon.png" />
     <AvaloniaResource Include="Assets/Icon/icon-256.png" />

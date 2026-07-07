@@ -63,7 +63,8 @@ public sealed class BrowserPlatformServices : IPlatformServices
                     signalr.Url = proxyUrl.Value;
                     signalr.ListenAddress = listenAddress.Value;
                     signalr.ListenPort = int.TryParse(listenPort.Value, out var p) ? p : 9100;
-                }),
+                },
+                autoConnect: true), // comes up on load, like the desktop TCP listener
         };
     }
 

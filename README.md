@@ -303,9 +303,9 @@ dotnet run --project samples/CrossEscPos.Headless -- test_receipt.txt out.png
 dotnet run --project src/CrossEscPos.App.Browser
 
 # Web host: serves the browser app AND the SignalR broker on one origin, giving it TCP reception
-# (browsers can't open raw sockets). The flag publishes the WASM app into the host's wwwroot on first
-# run (cached after). Browse to the printed URL; the emulator opens the TCP port itself.
-dotnet run --project samples/CrossEscPos.Host -p:PublishWasmClient=true
+# (browsers can't open raw sockets). First run publishes the WASM app into wwwroot (cached after).
+# Browse to the printed URL; the emulator opens the TCP port itself.
+dotnet run --project samples/CrossEscPos.Host
 
 # Tests (unit + headless UI)
 dotnet test CrossEscPos.slnx

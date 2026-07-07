@@ -25,16 +25,18 @@
     hosted template), so we publish it into wwwroot instead. Trimming is disabled for the client publish
     (Ardalis.SmartEnum trips the IL trimmer).
 
-    Opt-in via -p:PublishWasmClient=true so a plain/solution/CI build never kicks off this nested publish
-    (which would rebuild the shared libs concurrently with the outer build and race on their obj output).
-    Run or publish the host with the flag once; wwwroot is then cached until you delete it to refresh:
-    "dotnet run -p:PublishWasmClient=true" (or "dotnet publish -p:PublishWasmClient=true -c Release").
+    It runs automatically when you build/run/publish THIS project (so running the host just works), but
+    is skipped during a solution build ($(SolutionPath) is set) — there the nested publish
+    would rebuild the shared libs concurrently with the outer build and race on their obj output (the CI
+    build does exactly that). wwwroot is cached after the first populate; delete it to refresh, or force
+    the behaviour either way with -p:PublishWasmClient=true / =false.
   -->
   <Target Name="PublishWasmClient" BeforeTargets="Build"
-          Condition="'$(PublishWasmClient)' == 'true' and !Exists('$(MSBuildThisFileDirectory)wwwroot\_framework\dotnet.js')">
+          Condition="('$(SolutionPath)' == '' or '$(SolutionPath)' == '*Undefined*') and '$(PublishWasmClient)' != 'false' and !Exists('$(MSBuildThisFileDirectory)wwwroot\_framework\dotnet.js')">
     <PropertyGroup>
       <WasmClientProj>$(MSBuildThisFileDirectory)..\..\src\CrossEscPos.App.Browser\CrossEscPos.App.Browser.csproj</WasmClientProj>
-      <WasmClientOut>$(IntermediateOutputPath)wasmclient\</WasmClientOut>
+      <!-- Absolute: a relative PublishDir would resolve against the client project, not here. -->
+      <WasmClientOut>$(MSBuildThisFileDirectory)obj\wasmclient\</WasmClientOut>
     </PropertyGroup>
     <Message Importance="high" Text="Publishing the Avalonia WASM client into the host wwwroot (first build)…" />
     <RemoveDir Directories="$(WasmClientOut)" />

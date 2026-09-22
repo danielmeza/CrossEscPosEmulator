@@ -8,16 +8,20 @@
 </head>
 <body>
     <div id="out"></div>
-    <!-- Startup splash. Avalonia adds .splash-close to #avalonia-splash on its first frame; main.js
-         drives the paper (download progress) and the status text until then. -->
-    <div id="avalonia-splash" role="status" aria-live="polite">
-        <div class="splash-printer">
-            <div class="splash-slot"></div>
-            <div class="splash-paper" id="splash-paper" role="progressbar" aria-label="Download progress"
-                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+    <!-- Startup splash. Avalonia adds .splash-close to #avalonia-splash on its first frame; until then
+         main.js prints each downloaded file as a receipt line and keeps the status text current. -->
+    <div id="avalonia-splash">
+        <div class="splash-printer" aria-hidden="true">
+            <div class="splash-window">
+                <div class="splash-paper" id="splash-paper"></div>
+            </div>
+            <div class="splash-body">
+                <div class="splash-slot"></div>
+                <span class="splash-led"></span>
+            </div>
         </div>
         <p class="splash-title">CrossEscPos</p>
-        <p class="splash-status" id="splash-status">Loading the emulator…</p>
+        <p class="splash-status" id="splash-status" role="status">Loading the emulator…</p>
         <p class="splash-detail" id="splash-detail"></p>
     </div>
     <!-- Shared browser transports (Web Serial / WebUSB); classic script runs before the deferred module. -->

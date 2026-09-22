@@ -33,6 +33,8 @@
     <!-- SPDX license expression; the LICENSE file at the repo root is packed via Directory.Build.targets. -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- docs/logo.png, the README logo, packed as icon.png by Directory.Build.targets. -->
+    <PackageIcon>icon.png</PackageIcon>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <!-- Source Link: embed repo/commit info and untracked sources so consumers can step into the code.

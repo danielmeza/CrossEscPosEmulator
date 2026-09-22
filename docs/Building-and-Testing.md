@@ -54,7 +54,10 @@ Three GitHub Actions workflows publish the project:
 
 - [`release.yml`](../.github/workflows/release.yml) runs on a `v*` tag. It builds self-contained desktop
   apps for win-x64, linux-x64, osx-x64 and osx-arm64 (the macOS ones as an ad-hoc signed `.app`), packs
-  the NuGet libraries, publishes them to nuget.org, and attaches everything to a GitHub Release.
+  the NuGet libraries, publishes them to nuget.org and to GitHub Packages (which lists them in the
+  repository's sidebar), and attaches everything to a GitHub Release. Each package embeds the README,
+  converted for nuget.org by [`build/PackageReadme.targets`](../build/PackageReadme.targets), and uses
+  [`docs/logo.png`](logo.png) as its icon.
 - [`pages.yml`](../.github/workflows/pages.yml) runs on every push to `main`. It publishes the project
   site from [`site/`](../site) and the browser app under `/app/` to GitHub Pages.
 - [`wiki.yml`](../.github/workflows/wiki.yml) runs when `docs/` changes on `main` and publishes these

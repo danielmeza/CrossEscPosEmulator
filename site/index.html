@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CrossEscPos: from WPF to Avalonia</title>
+<meta name="description" content="A receipt printer emulator for testing ESC/POS code, ported from a Windows-only WPF app to one Avalonia 12 codebase for Windows, macOS, Linux and the browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --housing: #e3e5e1;
+    --paper: #ffffff;
+    --slot: #2c3034;
+    --ink: #1c1e20;
+    --muted: #585e63;
+    --rule: #c3c7c2;
+    --thermal: #c8102e;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --serif: "Source Serif 4", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --housing: #202326;
+      --paper: #2a2e32;
+      --slot: #0d0f10;
+      --ink: #e6e7e4;
+      --muted: #a4aaae;
+      --rule: #41464b;
+      --thermal: #ff6b7d;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--housing);
+    color: var(--ink);
+    font: 400 1.125rem/1.6 var(--serif);
+  }
+  img { max-width: 100%; height: auto; }
+  a { color: var(--thermal); text-underline-offset: 0.18em; }
+  a:focus-visible, .button:focus-visible {
+    outline: 3px solid var(--thermal);
+    outline-offset: 3px;
+  }
+  code { font: 500 0.84em var(--mono); }
+
+  .wrap { max-width: 68rem; margin: 0 auto; padding: 0 1rem; }
+  .prose { max-width: 42rem; }
+
+  /* Hero: the title beside a receipt the emulator printed. */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+    gap: 3rem;
+    align-items: start;
+    padding: 4.5rem 0 4rem;
+  }
+  .hero h1 {
+    margin: 0 0 1.25rem;
+    font: 800 clamp(2.6rem, 7vw, 4.6rem)/1 var(--mono);
+    letter-spacing: -0.03em;
+  }
+  .lead { font-size: 1.3rem; line-height: 1.5; margin: 0 0 1rem; }
+  .hero p { max-width: 34rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2rem; }
+  .button {
+    display: inline-block;
+    padding: 0.6rem 1rem;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    color: var(--ink);
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .button.primary { background: var(--ink); color: var(--housing); }
+  .button:hover { border-color: var(--thermal); }
+  .button.primary:hover { background: var(--thermal); }
+
+  .printer { position: relative; }
+  .slot {
+    position: relative;
+    z-index: 1;
+    height: 16px;
+    border-radius: 8px;
+    background: var(--slot);
+    box-shadow: inset 0 4px 5px rgba(0, 0, 0, 0.55);
+  }
+  .feed {
+    margin: -8px 1.25rem 0;
+    overflow: hidden;
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.18));
+  }
+  .paper {
+    --tooth: 9px;
+    padding-top: 8px;
+    padding-bottom: var(--tooth);
+    background: #fff;
+    -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / calc(2 * var(--tooth)) 100%;
+            mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / calc(2 * var(--tooth)) 100%;
+    animation: feed 1.8s steps(24, end) 0.3s both;
+  }
+  /* The 80 mm paper is 640 dots wide with the text block in the middle; trim the blank margins. */
+  .paper img { display: block; width: 100%; aspect-ratio: 480 / 704; object-fit: cover; }
+  @keyframes feed { from { transform: translateY(-100%); } to { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .paper { animation: none; } }
+  .printer figcaption {
+    margin: 1rem 1.25rem 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  /* Sections */
+  section { padding: 3.5rem 0; border-top: 1px solid var(--rule); }
+  h2 { margin: 0 0 1.5rem; font-size: 2rem; line-height: 1.2; font-weight: 600; }
+  h3 { margin: 2.5rem 0 0.75rem; font-size: 1.35rem; line-height: 1.3; font-weight: 600; }
+  li { margin-bottom: 0.5rem; }
+
+  .shots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem 1.5rem;
+  }
+  .shots figure { margin: 0; }
+  .shots a { display: block; }
+  .shots img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 7 / 5; /* every screenshot is at most 7:5 wide, so only the bottom crops */
+    object-fit: cover;
+    object-position: top center;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: var(--paper);
+  }
+  .shots figcaption { margin-top: 0.6rem; font-size: 1rem; }
+  .shots figcaption span { color: var(--muted); }
+  .shots .before figcaption strong { color: var(--thermal); }
+
+  .table-scroll { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; min-width: 48rem; font-size: 1rem; line-height: 1.5; }
+  th, td { padding: 0.75rem 1rem 0.75rem 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+  th { font-weight: 600; }
+  tbody th { white-space: nowrap; }
+  td:last-child { max-width: 26rem; }
+
+  .timeline { list-style: none; padding: 0; margin: 1rem 0; }
+  .timeline li {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    gap: 1rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--rule);
+    margin: 0;
+  }
+  .timeline time { font-weight: 600; }
+
+  .downloads { list-style: none; padding: 0; margin: 0 0 1.5rem; max-width: 42rem; }
+  .downloads li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--rule);
+    margin: 0;
+  }
+  .downloads span { color: var(--muted); }
+
+  footer { padding: 2.5rem 0 3.5rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: 1rem; }
+
+  @media (max-width: 52rem) {
+    .hero { grid-template-columns: 1fr; gap: 2.5rem; padding-top: 3rem; }
+    .printer { max-width: 26rem; }
+  }
+  @media (max-width: 36rem) {
+    .shots { grid-template-columns: 1fr; }
+    .timeline li { grid-template-columns: 1fr; gap: 0.1rem; }
+    .downloads li { flex-direction: column; gap: 0.1rem; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header class="hero">
+    <div>
+      <h1>CrossEscPos</h1>
+      <p class="lead">A receipt printer emulator for testing ESC/POS code. Point your point-of-sale software at it over TCP, serial or USB, and the receipt prints on screen.</p>
+      <p>It started as a Windows-only WPF app. This is the Avalonia 12 port: one codebase that runs on Windows, macOS, Linux and in the browser.</p>
+      <div class="actions">
+        <a class="button primary" href="./app/">Run it in your browser</a>
+        <a class="button" href="#downloads">Download for desktop</a>
+        <a class="button" href="https://github.com/danielmeza/CrossEscPosEmulator">View the source</a>
+      </div>
+    </div>
+    <figure class="printer">
+      <div class="slot" aria-hidden="true"></div>
+      <div class="feed">
+        <div class="paper">
+          <img src="receipt.png" width="640" height="704"
+               alt="A receipt reading CrossEscPos, ported from WPF on .NET 9 to Avalonia 12 on .NET 10, running on Windows, macOS, Linux and the browser, with a QR code.">
+        </div>
+      </div>
+      <figcaption>Printed by the emulator from an ESC/POS job. Scan the code to open the browser version.</figcaption>
+    </figure>
+  </header>
+
+  <section id="before-after" aria-labelledby="before-after-title">
+    <h2 id="before-after-title">Before and after</h2>
+    <div class="shots">
+      <figure class="before">
+        <a href="img/before-wpf.png"><img src="img/before-wpf.png" width="1069" height="1185" loading="lazy" alt="The original WPF app: a grey sidebar with Reset and Test print buttons beside plain text receipts."></a>
+        <figcaption><strong>Before:</strong> WPF <span>on Windows only</span></figcaption>
+      </figure>
+      <figure>
+        <a href="img/after-macos.png"><img src="img/after-macos.png" width="2248" height="1696" loading="lazy" alt="The Avalonia app on macOS with connection settings, a receipt with text styles and barcodes, and the printer state panel."></a>
+        <figcaption><strong>After:</strong> Avalonia 12 <span>on macOS</span></figcaption>
+      </figure>
+      <figure>
+        <a href="img/after-linux.png"><img src="img/after-linux.png" width="1400" height="1062" loading="lazy" alt="The same app on Linux rendering QR, PDF417, DataMatrix and Aztec codes."></a>
+        <figcaption><strong>After:</strong> the same app <span>on Linux</span></figcaption>
+      </figure>
+      <figure>
+        <a href="img/after-browser.png"><img src="img/after-browser.png" width="1400" height="1000" loading="lazy" alt="The same app in a browser tab, connected to a TCP proxy and showing a received receipt."></a>
+        <figcaption><strong>After:</strong> the same app <span>in the browser (WebAssembly)</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="migration" aria-labelledby="migration-title">
+    <div class="prose">
+      <h2 id="migration-title">What the migration cost</h2>
+
+      <h3>Starting point</h3>
+      <p>The upstream app, <a href="https://github.com/roydejong/EscPosEmulator">roydejong/EscPosEmulator</a>, targeted <code>net9.0-windows7.0</code> with <code>UseWPF</code>: 48 C# and XAML files, about 2,400 lines. Windows was wired in at four levels.</p>
+      <ul>
+        <li><strong>Rendering.</strong> Every receipt line drew itself with GDI+ (<code>System.Drawing</code>), which is Windows-only on .NET 6 and later. The GDI+ types were part of the core interface, <code>IReceiptPrintable.Render(Bitmap, Graphics, int, int)</code>. To show a receipt, the window saved each bitmap to a BMP stream and loaded it back as a WPF <code>BitmapImage</code>.</li>
+        <li><strong>UI.</strong> Code-behind only. The window created <code>Image</code> controls by hand, found them again by a GUID-based name, and added or removed them from a <code>StackPanel</code>.</li>
+        <li><strong>OS calls.</strong> A <code>user32!FlashWindow</code> P/Invoke and <code>SystemSounds</code> signalled new jobs.</li>
+        <li><strong>Assumptions.</strong> TCP was the only transport, and the test receipt was read from the current working directory.</li>
+      </ul>
+      <p>The ESC/POS interpreter (one command class per opcode) had no UI or Windows dependency, so its design carried over unchanged. It is now the headless <code>CrossEscPos.Core</code> package.</p>
+
+      <h3>What changed, and what each part took</h3>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col">Area</th><th scope="col">WPF original</th><th scope="col">Avalonia port</th><th scope="col">What it took</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Rendering</th><td>GDI+ <code>Bitmap</code> and <code>Graphics</code></td><td>SkiaSharp behind a backend-neutral <code>IReceiptCanvas</code>, plus a fully managed ImageSharp backend</td><td>The biggest single job. The text-line renderer was rewritten. System fonts differ per OS, so the same receipt measured differently on each; embedding JetBrains Mono made output identical everywhere.</td></tr>
+          <tr><th scope="row">UI</th><td>XAML and code-behind</td><td>AXAML and MVVM (CommunityToolkit.Mvvm), with receipts bound to a reusable <code>ReceiptView</code></td><td>The markup ported almost line for line. The work was moving code-behind into view models and bindings.</td></tr>
+          <tr><th scope="row">Win32 calls</th><td><code>FlashWindow</code>, <code>SystemSounds</code></td><td>A notification service: <code>afplay</code>, <code>Console.Beep</code> or <code>paplay</code> per OS, plus an in-window toast</td><td>There is no cross-platform system-sound API, so each OS gets its own strategy.</td></tr>
+          <tr><th scope="row">Files</th><td>Relative to the working directory</td><td>Avalonia <code>StorageProvider</code> for PNG export; app-relative asset paths</td><td>The working-directory assumption broke in the packaged app and was fixed right after the first release.</td></tr>
+          <tr><th scope="row">Transports</th><td>TCP</td><td>TCP and serial; the built-in Monitor adds direct USB through libusb</td><td>Port names differ per OS. A Homebrew-installed libusb wasn't found until the app added the usual install paths to the native search path at startup.</td></tr>
+          <tr><th scope="row">Packaging</th><td>One Windows <code>.exe</code></td><td>Self-contained builds for four targets from one CI matrix, including a macOS <code>.app</code></td><td>Unsigned macOS bundles were reported as damaged, so the bundle is ad-hoc signed and the README explains how to clear the quarantine flag.</td></tr>
+          <tr><th scope="row">Browser</th><td>None</td><td>The same app as an Avalonia WebAssembly head</td><td>A browser can't listen on TCP, so an ASP.NET Core SignalR host opens the socket and relays jobs to the page. Serial and USB use Web Serial and WebUSB. Export downloads a file instead of opening a save dialog.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="prose">
+      <h3>The numbers</h3>
+      <p>Seven days with commits over five weeks, according to the git history:</p>
+      <ol class="timeline">
+        <li><time datetime="2026-06-05">June 5–6, 2026</time><span>The port itself and desktop feature parity (PRs #1–#7).</span></li>
+        <li><time datetime="2026-06-20">June 20–21</time><span>Split into layered packages with a swappable render backend (#8–#10).</span></li>
+        <li><time datetime="2026-07-04">July 4–7</time><span>Managed ImageSharp backend, then the browser version (#11–#16).</span></li>
+      </ol>
+      <ul>
+        <li>From 48 files and about 2,400 lines to 168 files and about 10,000 lines of C# and AXAML, across 11 projects, 2 samples and 2 test projects. Most of the growth is new features, such as barcodes, 2D codes, status replies, printer-state simulation, the Monitor and the browser version, not port overhead.</li>
+        <li>131 xUnit tests (89 test methods) run the interpreter against a synthetic render backend, which proves the core runs headless. The controls are tested with Avalonia.Headless.</li>
+        <li>Built with AI assistance (Claude Code). The commits say so in their <code>Co-Authored-By</code> trailers.</li>
+      </ul>
+
+      <h3>What was easy, and what hurt</h3>
+      <p><strong>Easy:</strong> XAML to AXAML, the Fluent theme, <code>Dispatcher.UIThread</code> and headless UI testing. The UI layer was the smallest part of the port.</p>
+      <p><strong>Hurt:</strong> removing GDI+. It was part of the core interfaces, not just the view, so the renderer had to be redesigned before anything else could move. After that came native dependencies that differ per OS (libusb, fontconfig on Linux, macOS signing) and the browser sandbox, which has no sockets and no raw file system.</p>
+      <p><strong>Would do again:</strong> put the drawing surface behind an interface first. Once <code>IReceiptCanvas</code> existed, the ImageSharp backend (a community contribution) and the browser version each landed within a few days.</p>
+    </div>
+  </section>
+
+  <section id="downloads" aria-labelledby="downloads-title">
+    <h2 id="downloads-title">Downloads</h2>
+    <ul class="downloads">
+      <li><a href="https://github.com/danielmeza/CrossEscPosEmulator/releases/latest/download/CrossEscPos-win-x64.zip">Windows (x64)</a><span>zip, self-contained</span></li>
+      <li><a href="https://github.com/danielmeza/CrossEscPosEmulator/releases/latest/download/CrossEscPos-osx-arm64.zip">macOS (Apple silicon)</a><span>.app bundle</span></li>
+      <li><a href="https://github.com/danielmeza/CrossEscPosEmulator/releases/latest/download/CrossEscPos-osx-x64.zip">macOS (Intel)</a><span>.app bundle</span></li>
+      <li><a href="https://github.com/danielmeza/CrossEscPosEmulator/releases/latest/download/CrossEscPos-linux-x64.tar.gz">Linux (x64)</a><span>tar.gz, self-contained</span></li>
+      <li><a href="./app/">Browser</a><span>no install; Web Serial and WebUSB need Chrome or Edge</span></li>
+    </ul>
+    <div class="prose">
+      <p>No .NET install is needed. On macOS, if the app is reported as damaged, run <code>xattr -dr com.apple.quarantine CrossEscPos.app</code> once. In the browser, TCP printing needs the small relay host: run <code>dotnet run --project samples/CrossEscPos.Host</code> and open the page it serves.</p>
+    </div>
+  </section>
+
+</main>
+<footer>
+  <div class="wrap">
+    <p>Based on <a href="https://github.com/roydejong/EscPosEmulator">EscPosEmulator</a> by Roy de Jong. Ported and extended by <a href="https://github.com/danielmeza">Daniel Meza</a> for the <a href="https://avaloniaui.net/blog/avalonia-port-challenge">Avalonia Port Challenge</a>. <a href="https://github.com/danielmeza/CrossEscPosEmulator">Source, license and full README on GitHub</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

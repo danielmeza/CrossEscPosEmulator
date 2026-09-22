@@ -1,4 +1,4 @@
-# CrossEscPos.Core
+# Core Emulator (`CrossEscPos.Core`)
 
 The headless emulator: the ESC/POS interpreter, the `ReceiptPrinter` state machine, the receipt
 document model, and barcode/QR generation. No SkiaSharp, no Avalonia — you supply a render backend
@@ -15,7 +15,7 @@ using CrossEscPos.Graphics;   // the abstraction types
 var printer = new ReceiptPrinter(PaperConfiguration.Default, imageFactory, typefaces);
 ```
 
-`PaperConfiguration` controls the paper geometry (defaults to 80mm @ 203dpi):
+`PaperConfiguration` controls the paper geometry (defaults to 80 mm @ 203 dpi):
 
 ```csharp
 var paper = new PaperConfiguration { PaperWidthMm = 58, PrintWidthMm = 54, DotsPerInch = 203 };
@@ -25,7 +25,7 @@ var printer = new ReceiptPrinter(paper, imageFactory, typefaces);
 ## Feeding ESC/POS
 
 `FeedEscPos` is the single entry point. ESC/POS is binary, so the `byte[]` / `ReadOnlySpan<byte>`
-overloads are the natural ones; a `string` overload (one char per byte, Latin1) is there for convenience.
+overloads are the natural ones; a `string` overload (one char per byte, Latin-1) is there for convenience.
 
 ```csharp
 printer.FeedEscPos(bytes);                    // byte[]
@@ -33,14 +33,14 @@ printer.FeedEscPos(buffer.AsSpan(0, count));  // ReadOnlySpan<byte>
 printer.FeedEscPos("Hello\n");                // string convenience
 ```
 
-Each call is parsed and executed immediately. Malformed/unsupported commands are logged and skipped —
+Each call is parsed and executed immediately. Malformed / unsupported commands are logged and skipped —
 a bad byte never throws out of `FeedEscPos`.
 
 ## Receipts
 
 ```csharp
 printer.CurrentReceipt      // the receipt currently being printed (Receipt)
-printer.ReceiptStack        // IReadOnlyList<Receipt> — one entry per cut
+printer.ReceiptStack        // List<Receipt> — one entry per cut
 receipt.IsEmpty             // nothing printed yet
 using var image = receipt.Render();   // IReceiptImage (dispose it)
 ```
@@ -48,12 +48,12 @@ using var image = receipt.Render();   // IReceiptImage (dispose it)
 ## Printer state
 
 `ReceiptPrinter.State` is a `PrinterState` you can both read and drive. Driving it makes the emulator
-answer status commands the way a real device would (out of paper, cover open, …). It implements
-`INotifyPropertyChanged` and raises `Changed` on any mutation.
+answer status commands the way a real device would (out of paper, cover open, …). It raises `Changed`
+on any mutation.
 
 ```csharp
 printer.State.Online = false;             // now status replies report offline
-printer.State.Paper = PaperLevel.Out;     // and "out of paper"
+printer.State.Paper  = PaperLevel.Out;    // and "out of paper"
 printer.State.Changed += () => { /* refresh UI */ };
 ```
 
@@ -78,7 +78,8 @@ printer.FeedEscPos(requestBytes, new MyResponder());
 printer.RegisterResponder(myResponder);
 ```
 
-The transports in `CrossEscPos.Transports` already implement `IPrinterResponder` for you.
+The transports in `CrossEscPos.Transports` already implement `IPrinterResponder` for you — see
+**[Transports](Transports.md)**.
 
 ## Events
 

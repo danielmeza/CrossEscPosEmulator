@@ -1,69 +1,99 @@
-﻿# ESC/POS Receipt Printer Emulator
-🖨️ **This app emulates a networked receipt printer to test your ESC/POS commands against.**
+<h1 align="center">
+  <img src="docs/logo.png" alt="" width="112"><br>
+  CrossEscPos
+</h1>
 
-![Emulator](docs/Example.png)
+<h4 align="center">A receipt printer emulator for testing ESC/POS, on Windows, macOS, Linux and in the browser. Built with <a href="https://avaloniaui.net/">Avalonia</a>.</h4>
 
-### About
-- Cross-platform application (Avalonia 12 + SkiaSharp + .NET 10), runs on Windows, macOS and Linux
-- Listens for ESC/POS commands over **TCP/IP** and (optionally) a **serial port**
-- Logs commands and visually represents the resulting receipt(s)
-- Renders 1D barcodes and 2D codes (QR, PDF417, DataMatrix, Aztec), bit images, and page mode
-- Answers status queries (`DLE EOT`, `GS r`, Automatic Status Back) — simulate paper-out, cover, drawer, offline and error states from the **Printer state** panel
-- Signals buzzer / cash-drawer events with a sound and on-screen toast
-- Configure the TCP listen address/port and serial port live from the UI
-- Export rendered tickets to PNG — all in one image, or one file per cut
-- It support different text formattings in the same line, although a few combinations were tested.
+<p align="center">
+  <a href="https://github.com/danielmeza/CrossEscPosEmulator/actions/workflows/ci.yml"><img src="https://github.com/danielmeza/CrossEscPosEmulator/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/danielmeza/CrossEscPosEmulator/releases/latest"><img src="https://img.shields.io/github/v/release/danielmeza/CrossEscPosEmulator" alt="Latest release"></a>
+  <a href="https://www.nuget.org/packages/CrossEscPos.Core"><img src="https://img.shields.io/nuget/v/CrossEscPos.Core?label=NuGet" alt="NuGet version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/danielmeza/CrossEscPosEmulator" alt="MIT license"></a>
+</p>
 
-> **Cross-platform fork.** This project began as a cross-platform port of
-> [roydejong/EscPosEmulator](https://github.com/roydejong/EscPosEmulator) (originally a Windows/WPF
-> app). It has been migrated to Avalonia + SkiaSharp + .NET 10 so it runs on Windows, macOS and
-> Linux, and extended with barcode/QR rendering and a serial transport. All credit for the original
-> emulator goes to the upstream author. See [From WPF to Avalonia](#from-wpf-to-avalonia-what-the-migration-cost)
-> for before/after screenshots and what the migration took.
+<p align="center">
+  <a href="#key-features">Key features</a> •
+  <a href="#download">Download</a> •
+  <a href="#quick-start">Quick start</a> •
+  <a href="#from-wpf-to-avalonia-what-the-migration-cost">WPF to Avalonia</a> •
+  <a href="docs/README.md">Docs</a> •
+  <a href="https://danielmeza.github.io/CrossEscPosEmulator/app/">Live demo</a>
+</p>
 
-👷 **This is an unfinished experiment.** Use at your own risk and keep your expectations low. :)
+<p align="center">
+  <img src="docs/demo.gif" alt="The browser version receiving a receipt over TCP, dropping a job while the cover is open, and printing barcodes and 2D codes" width="100%">
+</p>
 
-### Download
+Testing receipt printing usually means a real printer, a roll of paper and a lot of walking back and
+forth. CrossEscPos stands in for the printer: point your point-of-sale software at it over TCP, serial or
+USB, and each receipt prints on screen. Status queries get real answers, so you can also test how your
+software handles paper-out, an open cover or a cash drawer.
 
-Pre-built, **self-contained** apps (no .NET install required) are published on the
-[Releases](../../releases) page:
+> **Avalonia Port Challenge entry.** CrossEscPos is a cross-platform port of
+> [roydejong/EscPosEmulator](https://github.com/roydejong/EscPosEmulator), a Windows-only WPF app. See
+> [From WPF to Avalonia](#from-wpf-to-avalonia-what-the-migration-cost) for before/after screenshots and
+> what the migration cost.
 
-| Platform | Artifact |
+## Key features
+
+- **The connections a real printer has.** TCP/IP (port 9100) and serial on the desktop; Web Serial,
+  WebUSB and a TCP proxy in the browser.
+- **Real receipts.** Text styles, 1D barcodes, 2D codes (QR, PDF417, DataMatrix, Aztec), bit images and
+  page mode. See [Supported commands](docs/Supported-Commands.md).
+- **It talks back.** Answers `DLE EOT`, `GS r` and Automatic Status Back. The **Printer state** panel
+  simulates paper-out, an open cover, the cash drawer, offline and error states, and like real hardware
+  the printer drops jobs while it isn't ready.
+- **A built-in test client.** The **Monitor** prints sample jobs and shows the status your software would
+  receive.
+- **Buzzer and cash drawer.** Both signal with a sound and an on-screen toast.
+- **PNG export.** Save every receipt in one image, or one file per cut.
+- **Embeddable.** A headless core and NuGet packages with swappable render backends (SkiaSharp, or
+  ImageSharp with no native dependencies).
+
+## Download
+
+| Platform | Download |
 |----------|----------|
-| Windows (x64) | `CrossEscPos-win-x64.zip` |
-| Linux (x64) | `CrossEscPos-linux-x64.tar.gz` |
-| macOS (Intel) | `CrossEscPos-osx-x64.zip` (`.app` bundle) |
-| macOS (Apple Silicon) | `CrossEscPos-osx-arm64.zip` (`.app` bundle) |
-| Browser | No download: [run it online](https://danielmeza.github.io/CrossEscPosEmulator/app/) (GitHub Pages) |
+| ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logoColor=white) | [x64 (.zip)](https://github.com/danielmeza/CrossEscPosEmulator/releases/latest/download/CrossEscPos-win-x64.zip) |
+| ![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white) | [Apple silicon (.zip)](https://github.com/danielmeza/CrossEscPosEmulator/releases/latest/download/CrossEscPos-osx-arm64.zip) · [Intel (.zip)](https://github.com/danielmeza/CrossEscPosEmulator/releases/latest/download/CrossEscPos-osx-x64.zip) |
+| ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black) | [x64 (.tar.gz)](https://github.com/danielmeza/CrossEscPosEmulator/releases/latest/download/CrossEscPos-linux-x64.tar.gz) |
+| ![Browser](https://img.shields.io/badge/Browser-654FF0?style=for-the-badge&logo=webassembly&logoColor=white) | [Run it online](https://danielmeza.github.io/CrossEscPosEmulator/app/), no install |
 
-Releases are produced by the [`Release`](.github/workflows/release.yml) GitHub Actions workflow on
-each `v*` tag.
+The links download the latest [release](https://github.com/danielmeza/CrossEscPosEmulator/releases). The
+builds are self-contained, so you don't need .NET installed. The libraries are on NuGet as
+`CrossEscPos.*`; see [Packages](docs/Packages.md).
 
-> **macOS first launch.** The `.app` is **ad-hoc signed but not notarized** (no paid Apple Developer
-> ID). macOS quarantines anything downloaded from the internet, so on first launch you may see
-> *"CrossEscPos is damaged and can't be opened"* (especially on Apple Silicon). Clear the
-> quarantine flag once, then open it:
->
-> ```sh
-> xattr -dr com.apple.quarantine /path/to/CrossEscPos.app
-> open /path/to/CrossEscPos.app
-> ```
->
-> (Right-click → **Open** also works once the quarantine is cleared.)
+> **macOS:** the apps aren't notarized yet. If macOS says CrossEscPos "is damaged and can't be opened",
+> see [Troubleshooting](#troubleshooting).
 
-### Built with
+## Quick start
 
-- [.NET 10](https://dotnet.microsoft.com/) · [Avalonia 12](https://avaloniaui.net/) ·
-  [SkiaSharp](https://github.com/mono/SkiaSharp) (rendering) ·
-  [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) (MVVM)
-- [ZXing.Net](https://github.com/micjahn/ZXing.Net) (1D barcodes) ·
-  [QRCoder](https://github.com/codebude/QRCoder) (QR codes) ·
-  [Ardalis.SmartEnum](https://github.com/ardalis/SmartEnum) (class-based enums) ·
-  [System.IO.Ports](https://www.nuget.org/packages/System.IO.Ports) (serial)
-- [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET) (the Monitor test client) ·
-  [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) (direct USB printing)
+1. Start the app. It listens on TCP port 9100 on all interfaces.
+2. Send it a receipt from a terminal, or point your POS software at `localhost:9100` as a network
+   printer:
 
-### From WPF to Avalonia: what the migration cost
+   ```sh
+   printf 'Hello from CrossEscPos\n\n\n\035V\000' | nc -w 1 localhost 9100
+   ```
+
+3. Click **Open monitor…** to print sample receipts, barcodes and QR codes, and flip the switches in the
+   **Printer state** panel to see the status your software would receive.
+
+To change the port, open a serial port, or test serial without hardware, see
+[Connecting](docs/Connecting.md).
+
+To render ESC/POS from your own .NET code, start with [Getting started](docs/Getting-Started.md):
+
+```csharp
+var printer = new ReceiptPrinter(PaperConfiguration.Default,
+    new SkiaImageFactory(), new SkiaTypefaceProvider());
+printer.FeedEscPos(escPosBytes);                     // ESC/POS is binary: feed the raw bytes
+using var image = printer.CurrentReceipt.Render();   // IReceiptImage
+new SkiaImageEncoder().EncodePng(image, outputStream);
+```
+
+## From WPF to Avalonia: what the migration cost
 
 *Entered in the [Avalonia Port Challenge](https://avaloniaui.net/blog/avalonia-port-challenge). The same
 write-up is on the [project site](https://danielmeza.github.io/CrossEscPosEmulator/), next to a
@@ -75,7 +105,7 @@ write-up is on the [project site](https://danielmeza.github.io/CrossEscPosEmulat
 | **After: Linux** | **After: browser (WebAssembly)** |
 | ![Avalonia app on Linux](docs/After%20Linux.png) | ![The same app in the browser](docs/After%20Browser.png) |
 
-#### Starting point
+### Starting point
 
 The upstream app ([roydejong/EscPosEmulator](https://github.com/roydejong/EscPosEmulator), last
 updated July 2025) targeted `net9.0-windows7.0` with `UseWPF`: 48 C#/XAML files, about 2,400 lines.
@@ -95,7 +125,7 @@ The ESC/POS interpreter (one command class per opcode, registered in `EscPosInte
 or Windows dependency, so its design carried over unchanged. It is now the headless
 `CrossEscPos.Core` package.
 
-#### What changed, and what each part cost
+### What changed, and what each part cost
 
 | Area | WPF original | Avalonia port | What it took |
 |---|---|---|---|
@@ -107,7 +137,7 @@ or Windows dependency, so its design carried over unchanged. It is now the headl
 | Packaging | One Windows `.exe` | Self-contained win-x64, linux-x64, osx-x64 and osx-arm64 builds from one CI matrix; a script builds the macOS `.app` | Unsigned macOS bundles were reported as "damaged", so the bundle is now ad-hoc signed. Notarization needs a paid Apple ID, so the README documents clearing the quarantine flag instead. |
 | Browser | n/a | The same app as an Avalonia WASM head (`net10.0-browser`) | Platform edges sit behind `IPlatformServices`. A browser can't listen on TCP, so an ASP.NET Core SignalR host opens the socket and relays jobs to the page. Serial and USB go through Web Serial and WebUSB via JS interop. The storage API's save picker failed in the browser, so export downloads a JS blob instead. |
 
-#### The numbers
+### The numbers
 
 - **Time:** 7 days with commits over 5 weeks, per the git history. The port and desktop parity landed
   on June 5–6, 2026 (PRs #1–#7), the layered-package refactor on June 20–21 (#8–#10), and the
@@ -120,7 +150,7 @@ or Windows dependency, so its design carried over unchanged. It is now the headl
   which proves the core is headless, and exercise the controls with Avalonia.Headless.
 - **Tools:** built with AI assistance (Claude Code); the commits carry `Co-Authored-By` trailers.
 
-#### What was easy, and what hurt
+### What was easy, and what hurt
 
 - **Easy:** XAML to AXAML, the Fluent theme, `Dispatcher.UIThread`, and headless UI testing. The UI
   layer was the smallest part of the port.
@@ -132,312 +162,98 @@ or Windows dependency, so its design carried over unchanged. It is now the headl
   existed, the ImageSharp backend (a community contribution) and the browser head each landed within
   a few days.
 
-### Supported commands
+## Documentation
 
-⚠️ Support is currently limited to only a subset of ESC/POS. Even the commands listed here may only be partially implemented.
+The long-form guides live in [`docs/`](docs/README.md) and are published as the
+[wiki](https://github.com/danielmeza/CrossEscPosEmulator/wiki).
 
-- Raw Text
-- LF: Line feed
-- CR: Carriage return
-- ESC Commands:
-  - Initialize printer (`ESC @`)
-  - Toggle italic (`ESC 4` / `ESC 5`) *[possibly deprecated?]*
-  - Select font (`ESC M`)
-  - Select charset (`ESC R`)
-  - Select character table (`ESC t`)
-  - Select justification (`ESC a`)
-  - Select line spacing (`ESC 2` / `ESC 3`)
-  - Toggle emphasis (`ESC E`)
-  - Toggle underline (`ESC -`)
-  - Set print text mode (`ESC !`)
-  - Full cut (`ESC m`)
-  - Partial cut (`ESC i`)
-  - Print and feed n lines (`ESC d`)
-  - Print and feed paper (`ESC J`)
-  - Generate pulse / kick cash drawer (`ESC p m t1 t2`)
-  - Select character code table (`ESC t`) — PC437/850/852/858/860/863/865/866/1252 remapped to Unicode
-  - Beeper (`ESC ( A`)
-  - Bit image (`ESC *`) — 8-dot and 24-dot inline raster
-  - Page mode: select page / standard mode (`ESC L` / `ESC S`), print area (`ESC W`), direction (`ESC T`), absolute position (`ESC $`)
-  - User-defined characters (`ESC &` / `ESC %` / `ESC ?`) — parsed & stored
-- Control characters:
-  - Buzzer / beeper (`BEL`, 0x07)
-  - Form feed (`FF`) — prints the page in page mode
-  - Cancel (`CAN`) — cancels page data
-- DLE (real-time) Commands:
-  - Real-time status (`DLE EOT n`, n=1-4)
-  - Real-time request / recover (`DLE ENQ`)
-  - Real-time cash-drawer pulse (`DLE DC4 1 m t`)
-- FS Commands:
-  - Print stored logo (`FS p n m`)
-  - Auto cut (`FS } 0x60 n`)
-- GS Commands:
-  - Select character size
-  - Select cut mode and cut paper
-  - Paper eject (`GS e n [m t]`)
-  - Print raster image (`GS v 0 [m xL xH yL yH ...pixels]`)
-  - Print 1D barcode (`GS k`) — UPC-A/E, EAN-13/8, CODE39, CODE93, CODE128, ITF, CODABAR (both function A & B forms)
-  - Set barcode height / module width (`GS h` / `GS w`)
-  - Select HRI text position / font (`GS H` / `GS f`)
-  - Print 2D symbols (`GS ( k`) — QR Code (cn=49), PDF417 (cn=48), DataMatrix (cn=54), Aztec (cn=55)
-  - **Status / transmit-back**: paper & drawer status (`GS r`), printer ID (`GS I`), Automatic Status Back (`GS a`)
-  - Download bit image: define (`GS *`) and print (`GS /`)
-  - Set motion units (`GS P`), absolute/relative vertical position (`GS $` / `GS \`)
-  - Config (accepted/ignored): user setup (`GS ( E`), print control (`GS ( K`), response request (`GS ( H`)
+| Guide | What's in it |
+|-------|--------------|
+| [Using the app](docs/Using-the-App.md) | The Monitor, the printer state panel, PNG export, choosing the render backend |
+| [Connecting](docs/Connecting.md) | TCP and serial, environment variables, testing serial without hardware |
+| [Browser app](docs/Browser-App.md) | The browser version, Web Serial and WebUSB, and the SignalR host for TCP |
+| [Supported commands](docs/Supported-Commands.md) | The emulated printer, the ESC/POS it understands, and what's missing |
+| [Getting started](docs/Getting-Started.md) and [Packages](docs/Packages.md) | Using the NuGet libraries in your own app |
+| [Architecture](docs/Architecture.md) | The packages, one app with two heads, the bundled font |
+| [Building and testing](docs/Building-and-Testing.md) | Building from source, running the tests, how releases are published |
 
-The emulator is **bidirectional**: status commands (`DLE EOT`, `GS r`, `GS I`) and Automatic Status
-Back reply to the host over the same TCP/serial connection, driven by the **Printer state** panel
-(right side) where you can simulate paper-out/near-end, cover open, cash-drawer open/closed,
-offline, and error conditions. Like a real device, the emulator **refuses to print** while it isn't
-ready (out of paper, cover open, offline, or in an error state) and shows a notification instead.
+## Troubleshooting
 
-Barcodes and QR codes render inline on the receipt, with optional HRI text:
+<details>
+<summary>macOS says the app "is damaged and can't be opened"</summary>
 
-![Barcode and QR example](docs/Example%20QR.png)
-
-### Not yet implemented
-
-A few things remain partial or unimplemented:
-
-- **Page-mode coordinate system** — page mode buffers output and rasterizes it on `FF`, but absolute/relative positioning (`ESC $`, `GS $`, `GS \`) and print direction (`ESC T`) are accepted as no-ops rather than fully positioned.
-- **User-defined glyph substitution** — `ESC &` glyphs are parsed and stored, but the inline text renderer still draws the font glyph rather than the custom bitmap.
-- **MaxiCode / GS1 DataBar / Composite** 2D symbologies (`GS ( k` cn=50/51/52).
-- **Graphics commands** `GS ( L` / `GS 8 L` (NV/raster graphics store-and-print) and other `ESC *`-family densities.
-- **Real-time `DLE DC4`** functions other than the cash-drawer pulse (power-off, recover-and-cancel, buzzer).
-- **Katakana / CJK code pages** render as missing glyphs since the bundled Latin font has no such glyphs.
-
-Contributions welcome — new commands follow the simple `BaseCommand` pattern in
-[`EscPos/Commands`](EscPos/Commands) and are registered in
-[`EscPosInterpreter.RegisterCommands`](EscPos/EscPosInterpreter.cs).
-
-### Connecting
-
-The emulator accepts ESC/POS data over two transports. Both can be changed **live from the UI**
-(left panel): pick a TCP listen address and port and Start/Stop the listener, or select a serial
-port + baud and Open/Close it (⟳ refreshes the port list). The environment variables below set the
-**initial** values at startup:
-
-| Variable | Default | Meaning |
-|----------|---------|---------|
-| `ESCPOS_LISTEN_ADDRESS` | `0.0.0.0` | Initial TCP bind address (`0.0.0.0` = all interfaces, `127.0.0.1` = localhost). |
-| `ESCPOS_TCP_PORT` | `9100` | Initial TCP listen port. Set to `off` / `0` to start with TCP stopped. |
-| `ESCPOS_SERIAL_PORT` | *(unset)* | Serial device to auto-open (e.g. `/dev/ttys004`, `COM3`). Unset = serial closed. |
-| `ESCPOS_SERIAL_BAUD` | `9600` | Serial baud rate. |
-| `ESCPOS_DEBUG_DUMP` | *(off)* | Set to `1` to dump every received payload to `last_*` files. |
-| `ESCPOS_RENDER_BACKEND` | `skia` | Render backend: `skia` (default) or `imagesharp` (managed). The `--backend` arg overrides it. |
-
-Examples:
+The `.app` is ad-hoc signed but not notarized, so macOS quarantines it after download. Clear the
+quarantine flag once, then open it:
 
 ```sh
-# (run is shorthand for: dotnet run --project src/CrossEscPos.App.Desktop)
-dotnet run --project src/CrossEscPos.App.Desktop                  # TCP only, port 9100
-ESCPOS_TCP_PORT=9200 dotnet run --project src/CrossEscPos.App.Desktop   # TCP on 9200
-ESCPOS_SERIAL_PORT=/dev/ttys004 dotnet run --project src/CrossEscPos.App.Desktop  # TCP 9100 + serial
-ESCPOS_TCP_PORT=off ESCPOS_SERIAL_PORT=COM3 dotnet run --project src/CrossEscPos.App.Desktop  # serial only
+xattr -dr com.apple.quarantine /path/to/CrossEscPos.app
+open /path/to/CrossEscPos.app
 ```
 
-**Pick the render backend** (for A/B testing the two rendering libraries) with `--backend skia`
-(default) or `--backend imagesharp` (the managed, no-native backend). The active backend is shown in
-the window title bar.
+</details>
+
+<details>
+<summary>The app fails to start or text is missing on Linux</summary>
+
+Install the font and rendering libraries if they're missing, for example on Debian or Ubuntu:
 
 ```sh
-dotnet run --project src/CrossEscPos.App.Desktop -- --backend imagesharp   # managed ImageSharp backend
-dotnet run --project src/CrossEscPos.App.Desktop -- --backend skia         # default SkiaSharp backend
+sudo apt install libfontconfig1 libfreetype6
 ```
 
-The status panel shows the active TCP endpoint and serial port.
+</details>
 
-#### Testing serial without hardware (app-to-app on one machine)
+<details>
+<summary>Port 9100 is already in use</summary>
 
-You don't need a USB serial adapter. Create a **virtual serial bridge** — a pair of linked ports —
-then point the emulator at one end and your POS application (or a shell) at the other. Bytes written
-to one end appear on the other.
+Pick another port in the **TCP/IP** panel and click **Start**, or start the app with
+`ESCPOS_TCP_PORT=9200`. See [Connecting](docs/Connecting.md) for all the environment variables.
 
-**macOS / Linux** — using [`socat`](http://www.dest-unreach.org/socat/) (`brew install socat` /
-`apt install socat`). A helper script is included:
+</details>
 
-```sh
-./scripts/serial-bridge.sh
-# It prints a linked pair, e.g.:
-#   PORT A (emulator): /dev/ttys004
-#   PORT B (your app): /dev/ttys005
-# Leave it running.
-```
+<details>
+<summary>The Monitor can't find libusb (direct USB printing)</summary>
 
-Then, in two more terminals:
+USB printing needs the native libusb library: `brew install libusb` on macOS, or
+`sudo apt install libusb-1.0-0` on Debian and Ubuntu. It ships with the Windows build. The operating
+system must not already be holding the printer.
 
-```sh
-# Terminal 2 — run the emulator on port A
-ESCPOS_SERIAL_PORT=/dev/ttys004 dotnet run --project src/CrossEscPos.App.Desktop
+</details>
 
-# Terminal 3 — send a receipt from "another app" on port B
-cat test_receipt.txt > /dev/ttys005
-#   …or from your own program, just open /dev/ttys005 like a normal serial port
-#   (9600 8N1) and write ESC/POS bytes to it.
-```
+<details>
+<summary>Web Serial or WebUSB says "unsupported" in the browser</summary>
 
-The receipt appears in the emulator window. Because the interpreter is stateful across reads,
-fragmented serial writes (commands split across packets) are handled correctly.
+Both APIs are only available in Chromium-based browsers such as Chrome and Edge, and only on HTTPS or
+`localhost`. Receiving over TCP in the browser needs the relay host:
+`dotnet run --project samples/CrossEscPos.Host`. See [Browser app](docs/Browser-App.md).
 
-**Windows** — install [com0com](https://com0com.sourceforge.net/) and create a linked pair
-(e.g. `COM3` ↔ `COM4`). Run the emulator with `ESCPOS_SERIAL_PORT=COM3` and have your application
-write to `COM4`.
+</details>
 
-### Monitor (built-in test client)
+## Limitations
 
-Sending test jobs is the **monitor's** job — the emulator is the device, the monitor is the POS-side
-client that drives it over the wire (just like a real application would). The Monitor is **shared** by
-both heads: click **Open monitor…** to launch it — a window on desktop, an in-page overlay in the
-browser. Its test jobs and status display are identical; only the transport differs:
+ESC/POS is a large command set, and CrossEscPos covers the common part of it. Not implemented yet:
+page-mode positioning, user-defined glyph substitution, MaxiCode and GS1 DataBar, the `GS ( L` graphics
+commands, and Katakana/CJK code pages. See [Not yet implemented](docs/Supported-Commands.md#not-yet-implemented)
+for the details, and expect gaps.
 
-- **Desktop** (built on [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) — pick a transport:
-  - **TCP/IP** — connect to the emulator's listener (or any networked printer).
-  - **Serial** — pick a port + baud; pairs with the emulator's serial transport via a virtual port bridge.
-  - **USB** — print **directly to a real USB printer** selected from the connected-device list (by
-    VID:PID), via libusb. This is send-only (no status), and needs native **libusb** installed
-    (macOS `brew install libusb`, Debian/Ubuntu `apt install libusb-1.0-0`; bundled on Windows) and the
-    OS not already holding the device.
-- **Browser** — sends over the **SignalR proxy** (the `CrossEscPos.Host` hub) to the in-page emulator,
-  for a full round-trip without any native transport.
+## Contributing and support
 
-It then lets you exercise the target without writing any code:
+- Found a bug, or a command that prints wrong? [Open an issue](https://github.com/danielmeza/CrossEscPosEmulator/issues).
+  Attach the ESC/POS bytes if you can: run the app with `ESCPOS_DEBUG_DUMP=1` to save them.
+- Pull requests are welcome. New commands follow the `BaseCommand` pattern described in
+  [Adding a command](docs/Supported-Commands.md#adding-a-command). Run `dotnet test CrossEscPos.slnx`
+  before you open one; warnings fail the build. See [Building and testing](docs/Building-and-Testing.md).
 
-- Print a sample receipt, all 1D barcodes, or QR / PDF417 / DataMatrix / Aztec.
-- Send the full feature test receipt, open the cash drawer, buzz, or cut.
-- Watch the **printer status** the emulator reports back: toggle paper-out / cover / drawer / offline
-  in the **Printer state** panel and the monitor's status display updates live (via Automatic Status
-  Back), confirming the emulator's status responses are wire-correct. When the printer isn't ready,
-  the emulator drops the job and shows a notification, just like real hardware.
+## Credits and license
 
-![Monitor](docs/Monitor.png)
-
-Toggling the emulator's **Printer state** panel pushes status to the monitor in real time — here the
-printer reports *paper low* and a *recoverable error*, so the monitor shows **Not ready**:
-
-![Monitor reflecting printer state](docs/Monitor%20Invalid%20State.png)
-
-### Exporting tickets
-
-Each cut (`ESC i` / `ESC m` / `GS V`) starts a new receipt — a "page". The **Export** buttons in the
-left panel save the rendered tickets as PNG:
-
-- **Export all (single image)** — stacks every receipt into one tall PNG (a save dialog).
-- **Export each cut (folder)** — writes one `receipt_NNN.png` per cut into a chosen folder.
-
-### Architecture & packages
-
-The emulator is split into layered, independently-publishable packages so the **rendering backend is
-swappable** and the **core runs headless** (and in the browser). The namespace is unified under
-`CrossEscPos.*` (organized by feature/directory, not by package), so types resolve across assemblies.
-
-| Package | Namespace(s) | Role | Depends on |
-| --- | --- | --- | --- |
-| `CrossEscPos.Abstractions` | `CrossEscPos`, `CrossEscPos.Graphics` | Backend-agnostic rendering + printer contracts (`IReceiptCanvas`, `IReceiptImage`, `IReceiptImageFactory`, `ITypefaceProvider`, `IImageEncoder`, `IReceiptPrintable`, `IPrinterResponder`) | — |
-| `CrossEscPos.Core` | `CrossEscPos.Emulator`, `CrossEscPos.EscPos`, … | Headless ESC/POS interpreter, printer state machine, receipt document model, barcode/QR generation. ESC/POS code maps (2D families, code tables, barcode systems, status requests) are behaviour-carrying `SmartEnum`s, not magic-number switches | Abstractions, QRCoder, ZXing.Net, Ardalis.SmartEnum |
-| `CrossEscPos.Rendering.Skia` | `CrossEscPos.Rendering.Skia` | The default **render backend** (SkiaSharp). Swap it for another `IReceiptImageFactory`/`ITypefaceProvider`/`IImageEncoder` | Abstractions, SkiaSharp |
-| `CrossEscPos.Rendering.ImageSharp` | `CrossEscPos.Rendering.ImageSharp` | A **100% managed render backend** (ImageSharp) — no native dependency, so it runs in **Blazor WASM** without a native relink. Same output as the Skia backend | Abstractions, SixLabors.ImageSharp.Drawing |
-| `CrossEscPos.Transports` | `CrossEscPos.Transports` | TCP / serial / USB transports (desktop only) | Core, System.IO.Ports, LibUsbDotNet, ESC-POS-.NET |
-| `CrossEscPos.Controls` | `CrossEscPos.Controls` | Reusable Avalonia controls (`ReceiptView`, `PrinterStatePanel`) — host apps consume these. **Backend-agnostic** (no SkiaSharp dependency) | Core, Avalonia |
-
-`Core` carries **no UI and no graphics-backend dependency**, so the library works headless or in WASM.
-The host (desktop, browser, or your own app) is the composition root: it picks a backend and injects it.
-
-```csharp
-var imageFactory = new SkiaImageFactory();
-var typefaces    = new SkiaTypefaceProvider();
-var printer      = new ReceiptPrinter(PaperConfiguration.Default, imageFactory, typefaces);
-printer.FeedEscPos(escPosBytes);                         // byte[] — ESC/POS is binary
-using var image  = printer.CurrentReceipt.Render();      // IReceiptImage
-new SkiaImageEncoder().EncodePng(image, outputStream);
-```
-
-📦 **Package usage guides:** [`docs/packages/`](docs/packages/README.md) — getting started, the core
-emulator, rendering & custom backends (Skia + managed ImageSharp), the Avalonia controls, and the
-transports. The desktop and browser apps are one shared Avalonia app ([`src/CrossEscPos.App`](src/CrossEscPos.App)).
-
-📖 **Full reference & guides:** the [**project wiki**](https://github.com/danielmeza/CrossEscPosEmulator/wiki),
-including a step-by-step [**Adding a render backend**](https://github.com/danielmeza/CrossEscPosEmulator/wiki/Adding-a-Render-Backend) guide.
-
-### Building & running
-
-Requires the .NET 10 SDK (and the `wasm-tools` workload for the browser head:
-`dotnet workload install wasm-tools`).
-
-```sh
-# Desktop app (Windows / macOS / Linux)
-dotnet run --project src/CrossEscPos.App.Desktop
-
-# Headless: ESC/POS bytes -> PNG, no UI, no Avalonia
-dotnet run --project samples/CrossEscPos.Headless -- test_receipt.txt out.png
-
-# Browser: the SAME app in the browser (Avalonia WASM head) — full parity with desktop
-dotnet run --project src/CrossEscPos.App.Browser
-
-# Web host: serves the browser app AND the SignalR broker on one origin, giving it TCP reception
-# (browsers can't open raw sockets). First run publishes the WASM app into wwwroot (cached after).
-# Browse to the printed URL; the emulator opens the TCP port itself.
-dotnet run --project samples/CrossEscPos.Host
-
-# Tests (unit + headless UI)
-dotnet test CrossEscPos.slnx
-```
-
-**One app, two heads.** The desktop and browser apps are the **same** Avalonia application
-([`src/CrossEscPos.App`](src/CrossEscPos.App)) — the same views, view models, receipts, printer-state
-panel, PNG export, and the Monitor test-client. Only the platform edges differ, injected via
-`IPlatformServices`:
-
-| | Desktop head | Browser head |
-|---|---|---|
-| Transports | TCP + serial | **Web Serial + WebUSB + SignalR TCP proxy** |
-| Export | native save dialog | browser **download** (same Avalonia storage API) |
-| Monitor | test-client **window** | in-page **overlay** (SignalR round-trip) |
-
-A browser can't open a raw **TCP** listen socket, so the browser head connects over **SignalR** to
-[`samples/CrossEscPos.Host`](samples/CrossEscPos.Host) — one ASP.NET Core host that serves the WASM app
-*and* runs the broker. The emulator asks the host to open a TCP listener on the address:port you choose;
-POS software connects there and its jobs bridge to the in-page emulator, with status flowing back. The
-same hub carries the browser Monitor's jobs, so it round-trips against the in-page emulator too.
-
-- **Windows / macOS:** no extra setup — native rendering libraries ship with the Avalonia packages.
-- **Linux:** install the usual font/render native deps if they are missing, e.g.
-  `sudo apt install libfontconfig1 libfreetype6` (Debian/Ubuntu).
-
-### Testing
-
-Two test projects under [`tests/`](tests):
-
-- **`CrossEscPos.Core.Tests`** — emulation coverage. ESC/POS sequences are fed through the interpreter
-  and the observable results (rendered draws, printer state, host responses, events) asserted: text
-  and control characters, styling (emphasis/italic/size/justification), cutting and feeding, 1D/2D
-  barcodes and bit images, status/transmit-back (`DLE EOT`, `GS r`, `GS I`, `GS a`), cash drawer and
-  buzzer, real-time commands, code pages, page mode and not-ready handling — plus exact `StatusByteBuilder`
-  bit layouts and the `SmartEnum` code maps. Rendering goes to a synthetic backend, so the suite runs
-  with no SkiaSharp (proving the core is headless).
-- **`CrossEscPos.Controls.Tests`** — headless Avalonia UI tests for the controls (two-way state binding,
-  receipt image rendering).
-
-```sh
-dotnet test CrossEscPos.slnx
-```
-
-### Fonts & license
-
-Receipt text is rendered with **[JetBrains Mono](https://www.jetbrains.com/lp/mono/)**, embedded in the
-`CrossEscPos.Rendering.Skia` package (under
-[`src/CrossEscPos.Rendering.Skia/Assets/Fonts/`](src/CrossEscPos.Rendering.Skia/Assets/Fonts)) so output
-is identical across platforms and works in the browser sandbox (no file IO). JetBrains Mono is licensed
-under the **SIL Open Font License 1.1**; the full license text is included at
-[`src/CrossEscPos.Rendering.Skia/Assets/Fonts/OFL.txt`](src/CrossEscPos.Rendering.Skia/Assets/Fonts/OFL.txt). Per the OFL, the font is redistributed here under its
-original license and "JetBrains Mono" is a trademark of JetBrains s.r.o. To swap in a different
-monospace font, replace the `receipt-mono*.ttf` files (and keep its license alongside).
-
-### Emulated printer
-
-This program emulates a printer with the following specifications:
-
- - 80mm paper width
- - 72mm printing width
- - 180x180dpi
- - ASCII Font A/B: 12x24 pixels
- - Automatic line feed
+- The original emulator is [EscPosEmulator](https://github.com/roydejong/EscPosEmulator) by Roy de Jong,
+  and all credit for its design goes to him and its contributors. Thanks to
+  [@yhonc9](https://github.com/yhonc9) for the ImageSharp render backend.
+- Built with [.NET 10](https://dotnet.microsoft.com/), [Avalonia 12](https://avaloniaui.net/),
+  [SkiaSharp](https://github.com/mono/SkiaSharp), [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet),
+  [ZXing.Net](https://github.com/micjahn/ZXing.Net), [QRCoder](https://github.com/codebude/QRCoder),
+  [Ardalis.SmartEnum](https://github.com/ardalis/SmartEnum), [System.IO.Ports](https://www.nuget.org/packages/System.IO.Ports),
+  [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET) (the Monitor) and
+  [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) (direct USB printing).
+- Released under the [MIT License](LICENSE). Receipts are rendered with JetBrains Mono under the SIL Open
+  Font License; see [Fonts and license](docs/Architecture.md#fonts-and-license).

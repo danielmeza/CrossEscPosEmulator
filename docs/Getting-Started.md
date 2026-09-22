@@ -1,4 +1,4 @@
-# Getting started
+# Getting Started
 
 The smallest useful setup: turn a stream of ESC/POS bytes into a PNG, with no UI.
 
@@ -9,11 +9,9 @@ dotnet add package CrossEscPos.Core
 dotnet add package CrossEscPos.Rendering.Skia
 ```
 
-Prefer a **fully managed** backend (no native dependency — needed for Blazor WASM without a native
+Prefer a **fully managed** backend (no native dependency — needed for the browser (WASM) without a native
 relink)? Swap the render package for `CrossEscPos.Rendering.ImageSharp`; everything below is identical
 apart from the `Skia*` type names becoming `ImageSharp*`.
-
-(See the [package index](README.md#installing) for versions and local builds.)
 
 ## 2. Compose a printer and render
 
@@ -39,7 +37,21 @@ encoder.EncodePng(image, output);
 ```
 
 That's the entire headless pipeline. No Avalonia, no window, no UI thread — `CrossEscPos.Core` has no
-dependency on a graphics framework; `CrossEscPos.Rendering.Skia` is the backend you plugged in.
+dependency on a graphics framework; the render backend is what you plugged in.
+
+### The same thing with the managed backend
+
+```csharp
+using CrossEscPos.Rendering.ImageSharp;
+
+var printer = new ReceiptPrinter(
+    PaperConfiguration.Default,
+    new ImageSharpImageFactory(),
+    new ImageSharpTypefaceProvider());
+
+printer.FeedEscPos(escpos);
+byte[] png = new ImageSharpImageEncoder().EncodePng(printer.CurrentReceipt.Render());
+```
 
 ## 3. Multiple receipts (cuts)
 
@@ -50,15 +62,14 @@ foreach (var receipt in printer.ReceiptStack)
 {
     if (receipt.IsEmpty) continue;
     using var img = receipt.Render();
-    // …encode each, or stack them — see Rendering.
+    // …encode each, or stack them into one image — see Rendering & Backends.
 }
 ```
 
 ## Where to go next
 
-- [Core](core.md) — printer state, status replies, events, code pages.
-- [Rendering](rendering.md) — the Skia + ImageSharp backends, exporting, stacking, and writing your own.
-- [Controls](controls.md) — show receipts live in an Avalonia app.
-- [Transports](transports.md) — feed the printer over TCP/serial/USB instead of a file.
-- [Blazor web app](web.md) — render ESC/POS in the browser with the managed backend.
-- [Adding a render backend](https://github.com/danielmeza/CrossEscPosEmulator/wiki/Adding-a-Render-Backend) (wiki) — the full step-by-step guide.
+- **[Core Emulator](Core-Emulator.md)** — printer state, status replies, events, code pages.
+- **[Rendering & Backends](Rendering-and-Backends.md)** — exporting, stacking, and the two backends.
+- **[Controls](Controls.md)** — show receipts live in an Avalonia app.
+- **[Transports](Transports.md)** — feed the printer over TCP / serial / USB instead of a file.
+- **[Browser App](Browser-App.md)** — the same pipeline, in the browser.

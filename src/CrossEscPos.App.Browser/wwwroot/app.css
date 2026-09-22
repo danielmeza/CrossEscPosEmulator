@@ -10,3 +10,83 @@ html, body {
 #out {
     height: 100vh;
 }
+
+/* Startup splash: a receipt feeds out of a printer slot as the runtime downloads. */
+#avalonia-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    background: #262626;
+    color: #e6e6e6;
+    font-family: system-ui, sans-serif;
+    text-align: center;
+    transition: opacity 0.25s ease-out, visibility 0s linear 0.25s;
+}
+
+#avalonia-splash.splash-close {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.splash-printer {
+    width: 132px;
+    height: 150px;
+}
+
+.splash-slot {
+    position: relative;
+    z-index: 1;
+    height: 12px;
+    border-radius: 6px;
+    background: #0e0f10;
+    box-shadow: inset 0 3px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* The paper's height is the download progress (set from main.js via --progress, 0..1). */
+.splash-paper {
+    --progress: 0;
+    height: calc(var(--progress) * 138px);
+    margin: -6px 12px 0;
+    background-color: #fff;
+    background-image: repeating-linear-gradient(to bottom, transparent 0 10px, #c4c4c4 10px 13px);
+    background-size: 64% calc(100% - 4px);
+    background-position: 12px 4px;
+    background-repeat: no-repeat;
+    transition: height 0.2s ease-out;
+}
+
+.splash-title {
+    margin: 20px 0 6px;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.splash-status {
+    margin: 0;
+    font-size: 15px;
+}
+
+.splash-detail {
+    min-height: 1.4em;
+    margin: 6px 0 0;
+    max-width: 36rem;
+    color: #a4a4a4;
+    font-size: 13px;
+}
+
+#avalonia-splash.splash-error .splash-status {
+    color: #ff6b7d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #avalonia-splash,
+    .splash-paper {
+        transition: none;
+    }
+}

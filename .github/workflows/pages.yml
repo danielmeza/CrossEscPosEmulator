@@ -1,0 +1,66 @@
+name: Pages
+
+# Publishes the project site (site/: the migration write-up, with the README screenshots) and the browser
+# build of the app (served under /app/) to GitHub Pages on every push to main.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
+      # Trimming stays off for the WASM publish (Ardalis.SmartEnum trips the IL trimmer), and Pages
+      # can't serve the precompressed .br/.gz copies, so skip generating them.
+      - name: Publish the browser app
+        run: >
+          dotnet publish src/CrossEscPos.App.Browser/CrossEscPos.App.Browser.csproj
+          -c Release
+          -p:PublishTrimmed=false
+          -p:CompressionEnabled=false
+          -o publish/browser
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/img _site/app
+          cp site/index.html site/receipt.png _site/
+          cp "docs/Before WPF.png"    _site/img/before-wpf.png
+          cp "docs/Example.png"       _site/img/after-macos.png
+          cp "docs/After Linux.png"   _site/img/after-linux.png
+          cp "docs/After Browser.png" _site/img/after-browser.png
+          cp -r publish/browser/wwwroot/. _site/app/
+          touch _site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

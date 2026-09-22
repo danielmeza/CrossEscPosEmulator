@@ -46,7 +46,10 @@ public sealed class ReceiptTransportEntry : TransportEntry
         {
             _applyBeforeConnect?.Invoke();
             try { await _transport.ConnectAsync(); }
-            catch { /* hub unreachable — the entry just shows "not connected" */ }
+            catch { /* hub unreachable — handled below */ }
+            // Standalone page (e.g. the GitHub Pages demo): say so instead of the raw fetch error.
+            if (!_transport.IsConnected)
+                Set(false, "not connected (no proxy host here)");
         }
     }
 

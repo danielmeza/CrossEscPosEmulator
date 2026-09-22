@@ -18,7 +18,8 @@
 > [roydejong/EscPosEmulator](https://github.com/roydejong/EscPosEmulator) (originally a Windows/WPF
 > app). It has been migrated to Avalonia + SkiaSharp + .NET 10 so it runs on Windows, macOS and
 > Linux, and extended with barcode/QR rendering and a serial transport. All credit for the original
-> emulator goes to the upstream author.
+> emulator goes to the upstream author. See [From WPF to Avalonia](#from-wpf-to-avalonia-what-the-migration-cost)
+> for before/after screenshots and what the migration took.
 
 👷 **This is an unfinished experiment.** Use at your own risk and keep your expectations low. :)
 
@@ -33,6 +34,7 @@ Pre-built, **self-contained** apps (no .NET install required) are published on t
 | Linux (x64) | `CrossEscPos-linux-x64.tar.gz` |
 | macOS (Intel) | `CrossEscPos-osx-x64.zip` (`.app` bundle) |
 | macOS (Apple Silicon) | `CrossEscPos-osx-arm64.zip` (`.app` bundle) |
+| Browser | No download: [run it online](https://danielmeza.github.io/CrossEscPosEmulator/app/) (GitHub Pages) |
 
 Releases are produced by the [`Release`](.github/workflows/release.yml) GitHub Actions workflow on
 each `v*` tag.
@@ -60,6 +62,75 @@ each `v*` tag.
   [System.IO.Ports](https://www.nuget.org/packages/System.IO.Ports) (serial)
 - [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET) (the Monitor test client) ·
   [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) (direct USB printing)
+
+### From WPF to Avalonia: what the migration cost
+
+*Entered in the [Avalonia Port Challenge](https://avaloniaui.net/blog/avalonia-port-challenge). The same
+write-up is on the [project site](https://danielmeza.github.io/CrossEscPosEmulator/), next to a
+[live browser demo](https://danielmeza.github.io/CrossEscPosEmulator/app/).*
+
+| Before: WPF, Windows only | After: Avalonia 12 on macOS |
+|:---:|:---:|
+| ![Original WPF app on Windows](docs/Before%20WPF.png) | ![Avalonia app on macOS](docs/Example.png) |
+| **After: Linux** | **After: browser (WebAssembly)** |
+| ![Avalonia app on Linux](docs/After%20Linux.png) | ![The same app in the browser](docs/After%20Browser.png) |
+
+#### Starting point
+
+The upstream app ([roydejong/EscPosEmulator](https://github.com/roydejong/EscPosEmulator), last
+updated July 2025) targeted `net9.0-windows7.0` with `UseWPF`: 48 C#/XAML files, about 2,400 lines.
+Windows was wired in at four levels:
+
+- **Rendering.** Every receipt line drew itself with GDI+ (`System.Drawing.Bitmap` and `Graphics`),
+  which is Windows-only on .NET 6 and later. The GDI+ types were part of the core interface,
+  `IReceiptPrintable.Render(Bitmap, Graphics, int, int)`. To show a receipt, the window saved each
+  bitmap into a BMP `MemoryStream` and loaded it back as a WPF `BitmapImage`.
+- **UI.** Code-behind only. `MainWindow.xaml.cs` created `Image` controls by hand, found them again
+  by a GUID-derived `Name`, and added or removed them from a `StackPanel`.
+- **OS calls.** A `user32!FlashWindow` P/Invoke and `System.Media.SystemSounds` signalled new jobs.
+- **Assumptions.** TCP was the only transport, and the test receipt was read from the current
+  working directory.
+
+The ESC/POS interpreter (one command class per opcode, registered in `EscPosInterpreter`) had no UI
+or Windows dependency, so its design carried over unchanged. It is now the headless
+`CrossEscPos.Core` package.
+
+#### What changed, and what each part cost
+
+| Area | WPF original | Avalonia port | What it took |
+|---|---|---|---|
+| Rendering | GDI+ `Bitmap` / `Graphics` | SkiaSharp, later behind a backend-neutral `IReceiptCanvas`, plus a fully managed ImageSharp backend | The biggest single job. The text-line renderer (styles, sizes, justification, underline) was rewritten. System fonts differ per OS, so the same receipt measured differently on each; embedding JetBrains Mono (OFL) made output identical everywhere. The ImageSharp backend later needed its advance widths matched to Skia's. |
+| UI | XAML + code-behind | AXAML + MVVM (CommunityToolkit.Mvvm); receipts bound to a reusable `ReceiptView` control | The markup ported almost line for line: `Window`, `DockPanel`, `StackPanel` and `ScrollViewer` all exist in Avalonia. The work was moving the code-behind into view models and bindings. |
+| Win32 calls | `FlashWindow`, `SystemSounds` | `INotificationService`: `afplay` on macOS, `Console.Beep` on Windows, `paplay`/`aplay` on Linux, plus an in-window toast | Avalonia has no cross-platform system-sound API, so each OS gets its own strategy. |
+| Files | Relative to the working directory | Avalonia `StorageProvider` for PNG export; app-relative asset paths | The working-directory assumption broke in the packaged app and was fixed right after the first release. |
+| Transports | TCP | TCP and serial (`System.IO.Ports`); the Monitor adds direct USB (libusb) | Port names differ per OS (`COM3`, `/dev/ttyUSB0`, `/dev/cu.*`). A Homebrew-installed libusb wasn't found until the app added the usual install paths to `NATIVE_DLL_SEARCH_DIRECTORIES` at startup. |
+| Packaging | One Windows `.exe` | Self-contained win-x64, linux-x64, osx-x64 and osx-arm64 builds from one CI matrix; a script builds the macOS `.app` | Unsigned macOS bundles were reported as "damaged", so the bundle is now ad-hoc signed. Notarization needs a paid Apple ID, so the README documents clearing the quarantine flag instead. |
+| Browser | n/a | The same app as an Avalonia WASM head (`net10.0-browser`) | Platform edges sit behind `IPlatformServices`. A browser can't listen on TCP, so an ASP.NET Core SignalR host opens the socket and relays jobs to the page. Serial and USB go through Web Serial and WebUSB via JS interop. The storage API's save picker failed in the browser, so export downloads a JS blob instead. |
+
+#### The numbers
+
+- **Time:** 7 days with commits over 5 weeks, per the git history. The port and desktop parity landed
+  on June 5–6, 2026 (PRs #1–#7), the layered-package refactor on June 20–21 (#8–#10), and the
+  browser head on July 4–7 (#11–#16).
+- **Size:** from 48 files and ~2.4k lines to 168 files and ~10k lines of C# and AXAML, across 11
+  projects, 2 samples and 2 test projects. Most of the growth is new features (barcodes, 2D codes,
+  status commands, printer-state simulation, the Monitor, serial/USB, the browser head), not port
+  overhead. The port PR itself (#1) was +2,525 / −487 lines across 60 files.
+- **Tests:** 131 xUnit tests (89 test methods). They run the interpreter against a synthetic render backend,
+  which proves the core is headless, and exercise the controls with Avalonia.Headless.
+- **Tools:** built with AI assistance (Claude Code); the commits carry `Co-Authored-By` trailers.
+
+#### What was easy, and what hurt
+
+- **Easy:** XAML to AXAML, the Fluent theme, `Dispatcher.UIThread`, and headless UI testing. The UI
+  layer was the smallest part of the port.
+- **Hurt:** removing GDI+. It was part of the core interfaces, not just the view, so the renderer
+  had to be redesigned before anything else could move. After that came per-OS native dependencies
+  (libusb, fontconfig on Linux, macOS signing) and the browser sandbox (no sockets, no raw file
+  system).
+- **Would do again:** put the drawing surface behind an interface first. Once `IReceiptCanvas`
+  existed, the ImageSharp backend (a community contribution) and the browser head each landed within
+  a few days.
 
 ### Supported commands
 

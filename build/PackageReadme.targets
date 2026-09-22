@@ -1,0 +1,98 @@
+<Project>
+
+  <!--
+    One README for GitHub and nuget.org. nuget.org renders package READMEs with raw HTML disabled, drops
+    relative links, and loads images only from allow-listed hosts (raw.githubusercontent.com is one). So
+    at pack time this generates the package's copy of the repo README:
+
+    - the HTML the README uses (the centered header, <details> sections) becomes plain Markdown, and
+    - relative images and links become absolute GitHub URLs pinned to the commit being packed, so the
+      package shows exactly the README (and screenshots) of the source it was built from.
+
+    Imported by Directory.Build.targets for packable projects only.
+  -->
+
+  <UsingTask TaskName="ConvertReadmeForNuGet" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Source ParameterType="System.String" Required="true" />
+      <Destination ParameterType="System.String" Required="true" />
+      <RawBaseUrl ParameterType="System.String" Required="true" />
+      <BlobBaseUrl ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var md = File.ReadAllText(Source);
+        const RegexOptions S = RegexOptions.Singleline;
+        Func<string, string, string> attr = (tag, name) =>
+        {
+            var m = Regex.Match(tag, name + "=\"([^\"]*)\"");
+            return m.Success ? m.Groups[1].Value : "";
+        };
+
+        // 1. HTML -> Markdown, for the tags the README uses. Images first, so links can wrap them.
+        md = Regex.Replace(md, @"<img\b[^>]*>", m => "![" + attr(m.Value, "alt") + "](" + attr(m.Value, "src") + ")");
+        md = Regex.Replace(md, @"<a\b[^>]*>(.*?)</a>",
+            m => "[" + m.Groups[1].Value.Trim() + "](" + attr(m.Value, "href") + ")", S);
+        md = Regex.Replace(md, @"<h([1-6])\b[^>]*>(.*?)</h\1>", m =>
+        {
+            // Images inside a heading go on their own line above it.
+            var inner = Regex.Replace(m.Groups[2].Value, @"<br\s*/?>", " ");
+            var images = Regex.Matches(inner, @"!\[[^\]]*\]\([^)]*\)").Cast<Match>().Select(x => x.Value);
+            var text = Regex.Replace(Regex.Replace(inner, @"!\[[^\]]*\]\([^)]*\)", ""), @"\s+", " ").Trim();
+            var level = int.Parse(m.Groups[1].Value);
+            var heading = level <= 2 ? new string('#', level) + " " + text : "**" + text + "**";
+            return string.Join("\n\n", images.Concat(new[] { heading }));
+        }, S);
+        md = Regex.Replace(md, @"<p\b[^>]*>(.*?)</p>",
+            m => string.Join("\n", m.Groups[1].Value.Trim().Split('\n').Select(l => l.Trim())), S);
+        md = Regex.Replace(md, @"<summary>(.*?)</summary>", "### $1", S);
+        md = Regex.Replace(md, @"</?details>\n?", "");
+        md = Regex.Replace(md, @"<br\s*/?>", "");
+
+        // 2. Relative images -> raw files; every other relative link -> the file on GitHub.
+        md = Regex.Replace(md, @"(!\[[^\]]*\])\((?![a-zA-Z][a-zA-Z0-9+.-]*:|#)([^)\s]+)\)",
+            m => m.Groups[1].Value + "(" + RawBaseUrl + m.Groups[2].Value + ")");
+        md = Regex.Replace(md, @"\]\((?![a-zA-Z][a-zA-Z0-9+.-]*:|#)([^)\s]+)\)",
+            m => "](" + BlobBaseUrl + m.Groups[1].Value + ")");
+
+        var leftover = Regex.Match(md, @"<(?!!--)/?[a-zA-Z][^>\n]*>");
+        if (leftover.Success)
+            Log.LogWarning("The package README still contains HTML that nuget.org won't render: " + leftover.Value);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(Destination));
+        File.WriteAllText(Destination, md);
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <PropertyGroup>
+    <BeforePack>$(BeforePack);GenerateNuGetReadme</BeforePack>
+  </PropertyGroup>
+
+  <Target Name="GenerateNuGetReadme">
+    <Exec Command="git rev-parse HEAD" WorkingDirectory="$(MSBuildThisFileDirectory).." ConsoleToMSBuild="true"
+          IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ReadmeCommit" />
+      <Output TaskParameter="ExitCode" PropertyName="_ReadmeGitExitCode" />
+    </Exec>
+    <PropertyGroup>
+      <!-- Outside a git checkout, point at main rather than failing the pack. -->
+      <_ReadmeCommit Condition="'$(_ReadmeGitExitCode)' != '0' or '$(_ReadmeCommit)' == ''">main</_ReadmeCommit>
+      <_ReadmeRepo>$(RepositoryUrl.Replace('https://github.com/', '').TrimEnd('/'))</_ReadmeRepo>
+      <_NuGetReadme>$(IntermediateOutputPath)nuget/README.md</_NuGetReadme>
+    </PropertyGroup>
+
+    <ConvertReadmeForNuGet Source="$(MSBuildThisFileDirectory)../README.md" Destination="$(_NuGetReadme)"
+                           RawBaseUrl="https://raw.githubusercontent.com/$(_ReadmeRepo)/$(_ReadmeCommit)/"
+                           BlobBaseUrl="https://github.com/$(_ReadmeRepo)/blob/$(_ReadmeCommit)/" />
+
+    <ItemGroup>
+      <None Include="$(_NuGetReadme)" Pack="true" PackagePath="\" Visible="false" />
+    </ItemGroup>
+  </Target>
+
+</Project>

@@ -7,4 +7,9 @@
        <PackageLicenseExpression> (SPDX), which needs no packed file. -->
   <Import Project="build/PackageReadme.targets" Condition="'$(IsPackable)' == 'true'" />
 
+  <!-- The package icon is the README logo (128 px, the size nuget.org recommends). -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)docs/logo.png" Pack="true" PackagePath="icon.png" Visible="false" />
+  </ItemGroup>
+
 </Project>

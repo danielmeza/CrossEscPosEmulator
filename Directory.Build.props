@@ -20,7 +20,7 @@
 
   <!-- NuGet package metadata, applied to the projects that set IsPackable=true. -->
   <PropertyGroup>
-    <Version>1.3.1</Version>
+    <Version>1.3.2</Version>
     <Authors>Daniel Meza</Authors>
     <!-- Packages are published to the Gasoleo Technology organization on nuget.org. -->
     <Company>Gasoleo Technology</Company>
@@ -33,6 +33,8 @@
     <!-- SPDX license expression; the LICENSE file at the repo root is packed via Directory.Build.targets. -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- docs/logo.png, the README logo, packed as icon.png by Directory.Build.targets. -->
+    <PackageIcon>icon.png</PackageIcon>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <!-- Source Link: embed repo/commit info and untracked sources so consumers can step into the code.

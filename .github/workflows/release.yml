@@ -146,6 +146,36 @@ jobs:
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
 
+  publish-github-packages:
+    name: Publish to GitHub Packages
+    needs: pack
+    runs-on: ubuntu-latest
+    # Real version tags only. nuget.org stays the main feed; this mirror is what lists the packages
+    # in the repository's "Packages" sidebar (linked through the RepositoryUrl in each .nuspec).
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nupkg
+          path: packages
+
+      # GitHub Packages has no symbol server, so push only the .nupkg files.
+      - name: Push packages
+        run: >
+          dotnet nuget push "packages/*.nupkg"
+          --api-key ${{ secrets.GITHUB_TOKEN }}
+          --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+          --no-symbols
+          --skip-duplicate
+
   release:
     name: Create GitHub Release
     needs: [build, pack]

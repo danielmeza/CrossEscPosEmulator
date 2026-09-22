@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://github.com/danielmeza/CrossEscPosEmulator/actions/workflows/ci.yml"><img src="https://github.com/danielmeza/CrossEscPosEmulator/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="https://github.com/danielmeza/CrossEscPosEmulator/releases/latest"><img src="https://img.shields.io/github/v/release/danielmeza/CrossEscPosEmulator" alt="Latest release"></a>
-  <a href="https://www.nuget.org/packages/CrossEscPos.Core"><img src="https://img.shields.io/nuget/v/CrossEscPos.Core?label=NuGet" alt="NuGet version"></a>
+  <a href="https://www.nuget.org/packages/CrossEscPos.Core"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.nuget.org%2Fv3-flatcontainer%2Fcrossescpos.core%2Findex.json&query=%24.versions%5B-1%3A%5D&prefix=v&label=NuGet&color=blue&logo=nuget" alt="NuGet version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/danielmeza/CrossEscPosEmulator" alt="MIT license"></a>
 </p>
 

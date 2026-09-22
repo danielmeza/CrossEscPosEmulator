@@ -104,8 +104,9 @@
             mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / calc(2 * var(--tooth)) 100%;
     animation: feed 1.8s steps(24, end) 0.3s both;
   }
-  /* The 80 mm paper is 640 dots wide with the text block in the middle; trim the blank margins. */
-  .paper img { display: block; width: 100%; aspect-ratio: 480 / 704; object-fit: cover; }
+  /* The 80 mm paper is 640 dots wide with the text block in the middle; trim the blank margins.
+     Like a real receipt it feeds out title first, so it hangs upside down, with the cut edge leading. */
+  .paper img { display: block; width: 100%; aspect-ratio: 480 / 704; object-fit: cover; transform: rotate(180deg); }
   @keyframes feed { from { transform: translateY(-100%); } to { transform: none; } }
   @media (prefers-reduced-motion: reduce) { .paper { animation: none; } }
   .printer figcaption {
@@ -202,10 +203,10 @@
       <div class="feed">
         <div class="paper">
           <img src="receipt.png" width="640" height="704"
-               alt="A receipt reading CrossEscPos, ported from WPF on .NET 9 to Avalonia 12 on .NET 10, running on Windows, macOS, Linux and the browser, with a QR code.">
+               alt="A receipt hanging upside down from the printer, reading CrossEscPos, ported from WPF on .NET 9 to Avalonia 12 on .NET 10, running on Windows, macOS, Linux and the browser, with a QR code.">
         </div>
       </div>
-      <figcaption>Printed by the emulator from an ESC/POS job. Scan the code to open the browser version.</figcaption>
+      <figcaption>Printed by the emulator from an ESC/POS job. Like a real receipt, it feeds out title first and hangs upside down. Scan the code to open the browser version.</figcaption>
     </figure>
   </header>
 

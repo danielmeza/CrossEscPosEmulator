@@ -64,8 +64,9 @@ The links download the latest [release](https://github.com/danielmeza/CrossEscPo
 builds are self-contained, so you don't need .NET installed. The libraries are on NuGet as
 `CrossEscPos.*`; see [Packages](docs/Packages.md).
 
-> **macOS:** the apps aren't notarized yet. If macOS says CrossEscPos "is damaged and can't be opened",
-> see [Troubleshooting](#troubleshooting).
+> [!NOTE]
+> The macOS apps aren't notarized yet. If macOS says CrossEscPos "is damaged and can't be opened", see
+> [Troubleshooting](#troubleshooting).
 
 ## Quick start
 

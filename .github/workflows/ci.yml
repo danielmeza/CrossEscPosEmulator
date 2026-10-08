@@ -35,7 +35,7 @@ env:
   # by `if:` — a skipped job reports as success, so a mistake in the condition would read as green
   # while building nothing. The "Refuse to downgrade" step below is the other half of that guard: it
   # fails loudly if a trusted run ever lands on Debug.
-  CONFIGURATION: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) || github.event.inputs.force_fork_lane == 'true') && 'Debug' || 'Release' }}
+  CONFIGURATION: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != 'danielmeza/fork-lane-probe') || github.event.inputs.force_fork_lane == 'true') && 'Debug' || 'Release' }}
 
 jobs:
   build:
@@ -64,7 +64,7 @@ jobs:
           trusted=false
           if [ "${{ github.event_name }}" = "push" ]; then
             trusted=true
-          elif [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+          elif [ "${{ github.event.pull_request.head.repo.full_name }}" = "danielmeza/fork-lane-probe" ]; then
             trusted=true
           fi
           if [ "$trusted" = "true" ] && [ "$CONFIGURATION" != "Release" ]; then

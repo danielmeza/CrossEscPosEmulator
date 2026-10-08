@@ -13,12 +13,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Fully managed 2D drawing (glyphs, lines, fills, image compositing). -->
-    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
-    <!-- Explicit pin: Drawing 2.1.7 pulls SixLabors.ImageSharp 3.1.8, which has the transitive
-         advisory GHSA-rxmq-m78w-7wmc. Pinning 3.1.12 clears the NuGetAudit finding so the
-         warnings-as-errors build stays clean. -->
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <!-- Fully managed 2D drawing (glyphs, lines, fills, image compositing). Drawing 3.1.2 already
+         depends on SixLabors.ImageSharp 4.1.2 exactly; ImageSharp is still listed explicitly so the
+         version this package renders against is visible in one place and in the packed nuspec. -->
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="3.1.2" />
+    <!-- 4.1.2 is the first release patched against the 2026-10-07 advisory batch (GHSA-jjfr-hcj7-qf5w,
+         GHSA-j9gm-c75j-xc9q, GHSA-j3p4-wp97-rph4 high; GHSA-wmxv-xphr-5c9g, GHSA-gwg2-r3hj-4w44
+         moderate). No 3.x release is patched, so the warnings-as-errors + NuGetAudit build can only
+         stay clean on 4.x. -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="4.1.2" />
   </ItemGroup>
 
   <ItemGroup>

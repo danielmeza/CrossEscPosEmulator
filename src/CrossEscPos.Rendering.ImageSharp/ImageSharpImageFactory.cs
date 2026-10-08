@@ -13,7 +13,7 @@ public sealed class ImageSharpImageFactory : IReceiptImageFactory
         var image = new Image<Rgba32>(
             Math.Max(1, width),
             Math.Max(1, height),
-            ImageSharpReceiptImage.ToColor(fill));
+            ImageSharpReceiptImage.ToPixel(fill));
         return new ImageSharpReceiptImage(image);
     }
 

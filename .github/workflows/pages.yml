@@ -8,6 +8,18 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# SixLabors.ImageSharp 4.x and ImageSharp.Drawing 3.x ship a build-time licence check
+# (ValidateLicenseTask) that only warns for Debug and fails the build for Release, which is what
+# every job below uses. MSBuild reads environment variables as properties, so exporting the key here
+# satisfies the task for CrossEscPos.Rendering.ImageSharp and CrossEscPos.Transports — the two
+# projects that reference ImageSharp directly and therefore import its targets.
+# Add the repository secret SIXLABORS_LICENSE_KEY (this project is public and MIT, so it qualifies
+# for the free Six Labors Community licence: https://licensing.sixlabors.com). Until the secret
+# exists this resolves to empty and the Release build fails with "No Six Labors license found" —
+# deliberately, rather than the check being suppressed.
+env:
+  SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+
 permissions:
   contents: read
   pages: write

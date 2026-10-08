@@ -24,9 +24,14 @@ public sealed record PrinterStatusReport(
 /// channel. A transport feeds raw bytes in as they arrive — in whatever sizes the wire delivers them
 /// — and gets one complete 4-byte block out at a time.
 ///
-/// Bit layouts are the Epson TM ASB format, read back exactly as
-/// <see cref="StatusByteBuilder.AutoStatusBack"/> writes them.
+/// Bit layouts are the Epson TM ASB format, read back as
+/// <see cref="StatusByteBuilder.AutoStatusBack"/> writes them — with one deliberate exception, noted
+/// on <see cref="Parse"/>: near-end is not reported once the roll is out.
 /// </summary>
+/// <remarks>
+/// Not thread-safe: <see cref="Feed"/> carries the partial block between calls, so one instance
+/// belongs to one reader loop. <see cref="Parse"/> is static and safe to call from anywhere.
+/// </remarks>
 public sealed class AutoStatusBackReader
 {
     /// <summary>Length of one ASB block, in bytes.</summary>
@@ -44,6 +49,13 @@ public sealed class AutoStatusBackReader
     /// complete block. Bytes left over from a partial block are kept for the next call, so a block
     /// split across reads is still delivered whole.
     /// </summary>
+    /// <remarks>
+    /// Precondition: the channel carries nothing but ASB blocks. Grouping is positional — there is
+    /// no frame delimiter in the protocol to resynchronise on — so a single stray byte shifts every
+    /// later block by one, and <see cref="Parse"/> then rejects all of them. A host that mixes
+    /// <c>DLE EOT</c> / <c>GS r</c> replies onto the same channel as ASB must frame those itself.
+    /// (ESC-POS-.NET's reader had the same positional grouping.)
+    /// </remarks>
     public void Feed(ReadOnlySpan<byte> data, Action<byte[]> onFrame)
     {
         ArgumentNullException.ThrowIfNull(onFrame);
@@ -65,6 +77,10 @@ public sealed class AutoStatusBackReader
     /// — the wrong length, or byte 0 without the block's fixed bit pattern (a <c>DLE EOT</c> or
     /// <c>GS r</c> reply that happens to be four bytes long, say). Rejecting those rather than
     /// decoding them keeps a status the printer never sent out of the host's hands.
+    ///
+    /// <see cref="PrinterStatusReport.PaperLow"/> is false whenever
+    /// <see cref="PrinterStatusReport.PaperOut"/> is true, even though the printer sets both sensor
+    /// pairs in that state: near-end tells a caller nothing once the roll has run out.
     /// </summary>
     public static PrinterStatusReport? Parse(ReadOnlySpan<byte> frame)
     {

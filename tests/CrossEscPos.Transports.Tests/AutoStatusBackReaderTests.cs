@@ -77,11 +77,21 @@ public class AutoStatusBackReaderTests
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
+    [InlineData(2)]
     [InlineData(3)]
     [InlineData(5)]
     [InlineData(8)]
     public void Parse_RejectsAnythingThatIsNotExactlyOneBlock(int length)
-        => Assert.Null(AutoStatusBackReader.Parse(new byte[length]));
+    {
+        // Byte 0 is a valid block header wherever there is room for one, so the length is the only
+        // thing that can make these invalid — otherwise the over-length rows would pass for the
+        // wrong reason.
+        var buffer = new byte[length];
+        if (length > 0)
+            buffer[0] = Byte0Fixed;
+
+        Assert.Null(AutoStatusBackReader.Parse(buffer));
+    }
 
     [Theory]
     [InlineData(0x00)] // bit 4 clear

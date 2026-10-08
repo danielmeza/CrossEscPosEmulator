@@ -119,7 +119,7 @@ public sealed class DesktopMonitorClient : IMonitorClient
         field.Value = keep is not null && options.Contains(keep) ? keep : options.FirstOrDefault() ?? "";
     }
 
-    public Task<string> ConnectAsync()
+    public async Task<string> ConnectAsync()
     {
         string target;
         switch (_mode)
@@ -153,7 +153,11 @@ public sealed class DesktopMonitorClient : IMonitorClient
         try
         {
             // Ask the emulator to push status on every state change (panel toggles show up here).
-            _link.Write(_e.EnableAutomaticStatusBack());
+            // Off the caller's thread: this is now a real write rather than ESC-POS-.NET's enqueue,
+            // and on USB it blocks for up to the bulk write timeout — which would freeze the UI,
+            // since the Monitor awaits this from the UI thread.
+            var link = _link;
+            await Task.Run(() => link.Write(_e.EnableAutomaticStatusBack())).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -163,7 +167,7 @@ public sealed class DesktopMonitorClient : IMonitorClient
             throw;
         }
 
-        return Task.FromResult(target);
+        return target;
     }
 
     public Task SendAsync(byte[] data)

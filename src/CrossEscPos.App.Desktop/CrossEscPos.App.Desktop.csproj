@@ -17,6 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The Monitor's TCP and serial lanes use ESC-POS-.NET's NetworkPrinter / SerialPrinter and its
+         parsed status events. Declared here rather than relied on transitively: USB stopped going
+         through this library, so CrossEscPos.Transports no longer carries it. -->
+    <PackageReference Include="ESCPOS_NET" Version="3.0.0" />
     <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />

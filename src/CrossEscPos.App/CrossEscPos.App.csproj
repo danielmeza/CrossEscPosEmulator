@@ -17,7 +17,8 @@
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <!-- The Monitor's test-job generator uses the ESCPOS_NET EPSON emitter (pure managed byte
-         building; the native serial/USB printers live in the desktop head's transports). -->
+         building). The desktop head declares its own reference for the serial/TCP printer types;
+         USB no longer comes from here at all. -->
     <PackageReference Include="ESCPOS_NET" Version="3.0.0" />
   </ItemGroup>
 

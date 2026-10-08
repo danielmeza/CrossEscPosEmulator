@@ -46,6 +46,11 @@ internal class FakeTransport : Stream
     public int ReadAttempts { get { lock (_gate) return _readAttempts; } }
     public bool IsDisposed { get { lock (_gate) return _disposed; } }
 
+    /// <summary>Writes that landed after this stream was disposed — undefined behaviour for a real stream.</summary>
+    public int WritesAfterDispose { get { lock (_gate) return _writesAfterDispose; } }
+
+    private int _writesAfterDispose;
+
     /// <summary>Makes bytes available on the printer's status channel.</summary>
     public void PushStatus(params byte[] data)
     {
@@ -65,7 +70,11 @@ internal class FakeTransport : Stream
     public override void Write(byte[] buffer, int offset, int count)
     {
         lock (_gate)
+        {
+            if (_disposed)
+                _writesAfterDispose++;
             _writes.Add(buffer.AsSpan(offset, count).ToArray());
+        }
     }
 
     public override int Read(byte[] buffer, int offset, int count)

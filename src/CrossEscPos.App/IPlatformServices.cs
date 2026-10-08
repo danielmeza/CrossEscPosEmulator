@@ -34,7 +34,8 @@ public interface IPlatformServices
     IReadOnlyList<Transports.TransportEntry> CreateTransports(ReceiptPrinter printer);
 
     /// <summary>
-    /// Creates the platform's Monitor transport (desktop: TCP/serial/USB over ESC-POS-.NET; browser:
+    /// Creates the platform's Monitor transport (desktop: TCP/serial over ESC-POS-.NET, USB over
+    /// CrossEscPos.Transports; browser:
     /// SignalR to the host's proxy hub), or null if the platform has no Monitor. The shared Monitor view
     /// + test-job generation are platform-agnostic.
     /// </summary>

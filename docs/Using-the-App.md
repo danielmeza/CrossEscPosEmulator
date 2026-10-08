@@ -9,7 +9,8 @@ client that drives it over the wire (just like a real application would). The Mo
 both heads: click **Open monitor…** to launch it — a window on desktop, an in-page overlay in the
 browser. Its test jobs and status display are identical; only the transport differs:
 
-- **Desktop** (built on [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET)) — pick a transport:
+- **Desktop** (TCP and serial via [ESC-POS-.NET](https://github.com/lukevp/ESC-POS-.NET), USB via
+  `CrossEscPos.Transports`) — pick a transport:
   - **TCP/IP** — connect to the emulator's listener (or any networked printer).
   - **Serial** — pick a port + baud; pairs with the emulator's serial transport via a virtual port bridge.
   - **USB** — print **directly to a real USB printer** selected from the connected-device list (by

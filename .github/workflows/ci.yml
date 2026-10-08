@@ -5,18 +5,37 @@ on:
     branches: [main, migrate-to-avalonia]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_fork_lane:
+        description: "Build the fork lane (Debug) even from this repository, to exercise that path."
+        type: boolean
+        default: false
 
 # SixLabors.ImageSharp 4.x and ImageSharp.Drawing 3.x ship a build-time licence check
-# (ValidateLicenseTask) that only warns for Debug and fails the build for Release, which is what
-# every job below uses. MSBuild reads environment variables as properties, so exporting the key here
-# satisfies the task for CrossEscPos.Rendering.ImageSharp and CrossEscPos.Transports — the two
-# projects that reference ImageSharp directly and therefore import its targets.
+# (ValidateLicenseTask) that only warns for Debug and fails for Release. MSBuild reads environment
+# variables as properties, so exporting the key here satisfies the task for
+# CrossEscPos.Rendering.ImageSharp and CrossEscPos.Transports — the two projects that reference
+# ImageSharp directly and therefore import its targets.
+#
 # Add the repository secret SIXLABORS_LICENSE_KEY (this project is public and MIT, so it qualifies
 # for the free Six Labors Community licence: https://licensing.sixlabors.com). Until the secret
-# exists this resolves to empty and the Release build fails with "No Six Labors license found" —
+# exists this resolves to empty and the Release lane fails with "No Six Labors license found" —
 # deliberately, rather than the check being suppressed.
 env:
   SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+
+  # A pull request from a fork is never given repository secrets, so the licence key cannot reach it
+  # and a Release build there can only ever fail — a red an external contributor has no way to fix.
+  # Such a run builds Debug instead, where the same licence check only warns, so a drive-by PR still
+  # gets a real signal from the compiler and the test suite. Every trusted run (push, same-repository
+  # PR) stays on Release and keeps covering the licence gate and the packing path.
+  #
+  # This is one job that always runs, with its configuration chosen here, rather than two lanes gated
+  # by `if:` — a skipped job reports as success, so a mistake in the condition would read as green
+  # while building nothing. The "Refuse to downgrade" step below is the other half of that guard: it
+  # fails loudly if a trusted run ever lands on Debug.
+  CONFIGURATION: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) || github.event.inputs.force_fork_lane == 'true') && 'Debug' || 'Release' }}
 
 jobs:
   build:
@@ -27,6 +46,33 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Report the lane
+        run: |
+          echo "event              = ${{ github.event_name }}"
+          echo "this repository    = ${{ github.repository }}"
+          echo "PR head repository = ${{ github.event.pull_request.head.repo.full_name }}"
+          echo "fork lane forced   = ${{ github.event.inputs.force_fork_lane }}"
+          echo "licence key set    = ${{ secrets.SIXLABORS_LICENSE_KEY != '' }}"
+          echo "CONFIGURATION      = $CONFIGURATION"
+          test -n "$CONFIGURATION"
+
+      # A broken expression must not quietly drop a trusted run to the lane that does not exercise
+      # the licence gate. Anything but Release on a push or a same-repository PR is a CI defect.
+      - name: Refuse to downgrade a trusted run to the fork lane
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          trusted=false
+          if [ "${{ github.event_name }}" = "push" ]; then
+            trusted=true
+          elif [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+            trusted=true
+          fi
+          if [ "$trusted" = "true" ] && [ "$CONFIGURATION" != "Release" ]; then
+            echo "::error::A trusted run must build Release, got '$CONFIGURATION'. The CONFIGURATION expression is wrong."
+            exit 1
+          fi
+          echo "trusted=$trusted, configuration=$CONFIGURATION"
+
       # The browser (WASM) head needs the wasm-tools workload to build.
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
@@ -35,16 +81,18 @@ jobs:
         run: dotnet restore CrossEscPos.slnx
 
       - name: Build
-        run: dotnet build CrossEscPos.slnx -c Release --no-restore
+        run: dotnet build CrossEscPos.slnx -c "$CONFIGURATION" --no-restore
 
       - name: Test
-        run: dotnet test CrossEscPos.slnx -c Release --no-build
+        run: dotnet test CrossEscPos.slnx -c "$CONFIGURATION" --no-build
 
       - name: Pack libraries
-        run: dotnet pack CrossEscPos.slnx -c Release --no-build -o artifacts/packages
+        run: dotnet pack CrossEscPos.slnx -c "$CONFIGURATION" --no-build -o artifacts/packages
 
       - uses: actions/upload-artifact@v4
         with:
-          name: nupkg
+          # The configuration is in the name so a fork lane's Debug packages are never mistaken for
+          # a releasable set. Publishing is the Release workflow's job, not this one's.
+          name: nupkg-${{ env.CONFIGURATION }}
           path: artifacts/packages/*.nupkg
           if-no-files-found: warn

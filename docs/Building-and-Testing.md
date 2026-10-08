@@ -30,6 +30,34 @@ dotnet test CrossEscPos.slnx
 - **Linux:** install the usual font/render native deps if they are missing, e.g.
   `sudo apt install libfontconfig1 libfreetype6` (Debian/Ubuntu).
 
+## Release builds need a Six Labors licence key
+
+`CrossEscPos.Rendering.ImageSharp` and `CrossEscPos.Transports` reference `SixLabors.ImageSharp`
+directly, and ImageSharp 4.x / ImageSharp.Drawing 3.x ship a build-time licence check that **warns in
+Debug and fails in Release**:
+
+```
+error : No Six Labors license found. Set $(SixLaborsLicenseKey), set $(SixLaborsLicenseFile),
+        or add a 'sixlabors.lic' file to the project/workspace.
+```
+
+Debug builds and `dotnet test` need nothing. For `-c Release` (and therefore `dotnet pack`), supply a
+key:
+
+```sh
+dotnet build CrossEscPos.slnx -c Release -p:SixLaborsLicenseKey=<key>
+# or export it once — MSBuild reads environment variables as properties:
+export SixLaborsLicenseKey=<key>
+```
+
+This repository is public and MIT-licensed, so it qualifies for the free **Six Labors Community**
+licence — request one at <https://licensing.sixlabors.com>. CI reads the key from the repository
+secret `SIXLABORS_LICENSE_KEY`.
+
+Consumers of the published NuGet packages are **not** affected: build assets do not flow
+transitively, and every ImageSharp dependency is packed with `exclude="Build,Analyzers"`, so the
+licence check never reaches a downstream build.
+
 ## Testing
 
 Two test projects under [`tests/`](../tests):

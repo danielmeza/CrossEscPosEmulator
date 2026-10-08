@@ -21,6 +21,12 @@ namespace CrossEscPos.Rendering.ImageSharp;
 /// transform stack stays here as a <see cref="Matrix3x2"/> stack and is handed to each pass through
 /// <see cref="DrawingOptions.Transform"/> — mirroring the Skia canvas semantics
 /// (translate outermost, scale inner).
+///
+/// Two side effects of that move are deliberate, and both bring this backend closer to the Skia one:
+/// image draws now honour the canvas transform (ImageSharp 3.x's image processor ignored the ambient
+/// drawing transform entirely), and a fractional image origin is resampled rather than truncated to
+/// whole pixels, as <c>SKCanvas.DrawBitmap</c> does. No current call site draws an image under a
+/// non-identity transform or at a fractional origin, so neither changes today's output.
 /// </summary>
 public sealed class ImageSharpReceiptCanvas : IReceiptCanvas
 {
@@ -73,10 +79,39 @@ public sealed class ImageSharpReceiptCanvas : IReceiptCanvas
             new RectanglePolygon(rect.X, rect.Y, rect.Width, rect.Height)));
 
     public void DrawLine(float x0, float y0, float x1, float y1, ReceiptColor color, float strokeWidth)
-        => Paint(antialias: true, canvas => canvas.DrawLine(
-            new SolidPen(ToColor(color), strokeWidth),
-            new PointF(x0, y0),
-            new PointF(x1, y1)));
+    {
+        // Drawing 3.x centres a stroke on its geometric coordinate, so an axis-aligned odd-width line
+        // lands exactly on a pixel boundary and rasterises as two half-covered rows at 50% grey
+        // instead of one solid row. A receipt underline is a dot row, and 50% grey vanishes under the
+        // 1-bit threshold a thermal printer applies — measured: a one-dot underline produced zero
+        // pixels below 50% luminance, while the Skia backend produces a solid run.
+        //
+        // An axis-aligned line is therefore filled as a hard-edged rectangle of the same extent, which
+        // is what the dot row physically is. Doing it as geometry rather than as a half-pixel nudge
+        // keeps it correct under the canvas transform: a double-height text run scales the rectangle,
+        // where a nudge in local coordinates would scale into a full-pixel displacement.
+        var brush = new SolidBrush(ToColor(color));
+        float half = strokeWidth / 2f;
+
+        if (y0 == y1)
+        {
+            float x = Math.Min(x0, x1);
+            Paint(antialias: false, canvas => canvas.Fill(
+                brush, new RectanglePolygon(x, y0 - half, Math.Abs(x1 - x0), strokeWidth)));
+        }
+        else if (x0 == x1)
+        {
+            float y = Math.Min(y0, y1);
+            Paint(antialias: false, canvas => canvas.Fill(
+                brush, new RectanglePolygon(x0 - half, y, strokeWidth, Math.Abs(y1 - y0))));
+        }
+        else
+        {
+            // Diagonals have no pixel grid to snap to; stroke them anti-aliased, as the contract says.
+            Paint(antialias: true, canvas => canvas.DrawLine(
+                new SolidPen(ToColor(color), strokeWidth), new PointF(x0, y0), new PointF(x1, y1)));
+        }
+    }
 
     public void DrawImage(IReceiptImage image, float x, float y)
     {

@@ -7,7 +7,8 @@ namespace CrossEscPos.App.Monitor;
 
 /// <summary>
 /// The transport the shared <see cref="MonitorViewModel"/> uses to reach the emulator/printer. Desktop
-/// implements TCP / serial / USB over ESC-POS-.NET; the browser implements a single SignalR mode that
+/// implements TCP and serial over ESC-POS-.NET and USB over CrossEscPos.Transports' own UsbPrinter;
+/// the browser implements a single SignalR mode that
 /// rides the host's proxy hub to the in-page emulator. The view model owns the test-job generation and the
 /// status/indicator UI; the client only carries bytes and surfaces the status the emulator sends back.
 /// </summary>

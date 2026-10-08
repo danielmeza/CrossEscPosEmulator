@@ -64,7 +64,8 @@ public static class StatusByteBuilder
 
     /// <summary>
     /// The 4-byte Automatic Status Back block (sent on GS a / on every state change while enabled).
-    /// Byte layout matches the Epson TM ASB format as parsed by ESC-POS-.NET: byte 0 has fixed bit 4
+    /// Byte layout matches the Epson TM ASB format, as read back by <see cref="AutoStatusBackReader"/>
+    /// (keep the two in step): byte 0 has fixed bit 4
     /// (and bits 0,1,7 clear); the cash-drawer bit is inverted (open = bit 2 clear); paper-low/out
     /// use paired bits.
     /// </summary>

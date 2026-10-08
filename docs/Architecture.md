@@ -14,7 +14,7 @@ swappable** and the **core runs headless** (and in the browser). The namespace i
 | `CrossEscPos.Core` | `CrossEscPos.Emulator`, `CrossEscPos.EscPos`, … | Headless ESC/POS interpreter, printer state machine, receipt document model, barcode/QR generation. ESC/POS code maps (2D families, code tables, barcode systems, status requests) are behaviour-carrying `SmartEnum`s, not magic-number switches | Abstractions, QRCoder, ZXing.Net, Ardalis.SmartEnum |
 | `CrossEscPos.Rendering.Skia` | `CrossEscPos.Rendering.Skia` | The default **render backend** (SkiaSharp). Swap it for another `IReceiptImageFactory`/`ITypefaceProvider`/`IImageEncoder` | Abstractions, SkiaSharp |
 | `CrossEscPos.Rendering.ImageSharp` | `CrossEscPos.Rendering.ImageSharp` | A **100% managed render backend** (ImageSharp) — no native dependency, so it runs in the browser (WebAssembly) without a native relink. Same output as the Skia backend | Abstractions, SixLabors.ImageSharp.Drawing |
-| `CrossEscPos.Transports` | `CrossEscPos.Transports` | TCP / serial / USB transports (desktop only) | Core, System.IO.Ports, LibUsbDotNet, ESC-POS-.NET |
+| `CrossEscPos.Transports` | `CrossEscPos.Transports` | TCP / serial / USB transports (desktop only) | Core, System.IO.Ports, LibUsbDotNet |
 | `CrossEscPos.Controls` | `CrossEscPos.Controls` | Reusable Avalonia controls (`ReceiptView`, `PrinterStatePanel`) — host apps consume these. **Backend-agnostic** (no SkiaSharp dependency) | Core, Avalonia |
 
 `Core` carries **no UI and no graphics-backend dependency**, so the library works headless or in WASM.

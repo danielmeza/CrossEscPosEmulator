@@ -35,6 +35,50 @@ flowchart BT
     Host -.-> Transports
 ```
 
+## Breaking changes
+
+### `CrossEscPos.Transports` drops ESCPOS_NET
+
+`UsbPrinter` no longer derives from `ESCPOS_NET.BasePrinter`. It derives from `StreamPrinter`, this
+package's own host-side printer, whose one-method write surface is `IPrinterResponder.Send` — the
+same interface `NetClient` and `SerialServer` implement, though note those two are the *printer*
+answering a host, while `StreamPrinter` is the host driving a printer. The `ESCPOS_NET` dependency is
+gone, and with it the `SixLabors.ImageSharp` reference that existed only to lift ESCPOS_NET's
+transitive 2.1.3 — the package now depends on `CrossEscPos.Core`, `LibUsbDotNet` and
+`System.IO.Ports`, and nothing else.
+
+What this changes for a consumer holding a `UsbPrinter`:
+
+| Was, on `BasePrinter` | Is now |
+| --- | --- |
+| `Write(byte[])`, `Write(byte[][])` | `Send(byte[])` — the `IPrinterResponder` method |
+| `event EventHandler StatusChanged` with a parsed `PrinterStatusEventArgs` | `event Action<byte[]> StatusFrameReceived` with the raw 4-byte Automatic Status Back block; decode it with `CrossEscPos.Emulator.AutoStatusBackReader.Parse` |
+| `PrinterName` | `Name` — same value, still `$"USB {vid:X4}:{pid:X4}"` |
+| `Status`, `GetStatus()`, `Flush(…)`, `Connected` / `Disconnected` | not replaced — see below |
+| writes queued on a background pump, failures swallowed | `Send` writes synchronously and throws on failure |
+| `protected override void OverridableDispose()` | ordinary `IDisposable`. `UsbPrinter` is `sealed` (it already was), so this only concerns a `StreamPrinter` subclass, which overrides `Dispose(bool)` |
+
+Three status flags ESCPOS_NET parsed are not surfaced: *paper currently feeding*, *waiting for
+online recovery* and *feed button pushed*. Nothing in this repository read them, and the bits are
+still in the block `StatusFrameReceived` hands over, so a consumer that needs them can read them.
+`GetStatus()` threw `NotImplementedException` in ESCPOS_NET and has no replacement. `Connected` and
+`Disconnected` never fired for USB, because `BasePrinter` only raised them from the network
+printer's reconnect logic.
+
+Two decode details were kept deliberately, because ESCPOS_NET had them and a real printer can
+exercise them: a block whose first byte lacks the ASB fixed bits is rejected rather than decoded,
+and the error flag covers all four byte-1 error bits (recoverable, unrecoverable, autocutter and
+recoverable non-autocutter), not just the two the emulator itself emits.
+
+Why: ESCPOS_NET 3.0.0 is its last release (2022-08-18) and upstream's last commit is 2024-09-18. It
+pinned `SixLabors.ImageSharp` 2.x, which no longer has a release without published advisories, and
+its `PrintImage` has been broken since ImageSharp 3.x. `UsbPrinter` already owned the parts that
+touch the device — it built its own stream, reader and writer, and overrode disposal — so what the
+dependency actually supplied was the generic stream pump above it: the write queue, the 15,000-byte
+chunking, the flush policy, the read loop, the 4-byte framing and the bit decode. That is what
+`StreamPrinter` and `AutoStatusBackReader` now do, in about 150 lines, without setting the whole
+package's dependency floor.
+
 ## Choosing a render backend
 
 | | `Rendering.Skia` | `Rendering.ImageSharp` |

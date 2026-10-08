@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using ESCPOS_NET;
 using LibUsbDotNet.LibUsb;
 using LibUsbDotNet.Main;
 
@@ -19,10 +18,11 @@ public sealed record UsbDeviceInfo(int Vid, int Pid)
 /// A <see cref="Stream"/> backed by a USB device's bulk endpoints: writes go to the bulk-OUT
 /// endpoint, reads come from the bulk-IN endpoint (the printer's status channel).
 ///
-/// USB bulk transfers are packet-oriented, but <see cref="BasePrinter"/> reads its status channel
-/// one byte at a time. So reads are buffered: a single bulk transfer fills an internal buffer that
-/// is then served byte-by-byte. <see cref="Read"/> returns 0 on timeout (no data yet) rather than
-/// blocking, which keeps the printer's read loop responsive without hot-spinning.
+/// USB bulk transfers are packet-oriented while a stream reader may ask for fewer bytes than a
+/// packet carries, so reads are buffered: one bulk transfer fills an internal buffer that is then
+/// served across as many <see cref="Read"/> calls as it takes. <see cref="Read"/> returns 0 on
+/// timeout (no data yet) rather than blocking, which keeps the status read loop responsive without
+/// hot-spinning.
 /// </summary>
 internal sealed class UsbStream : Stream
 {
@@ -80,7 +80,7 @@ internal sealed class UsbStream : Stream
         if (_reader is null || _closing)
         {
             // Send-only device (no bulk-IN endpoint), or we're tearing down: idle briefly so the
-            // printer's read loop doesn't spin, and never touch the (closing) native handle.
+            // status read loop doesn't spin, and never touch the (closing) native handle.
             Thread.Sleep(ReadTimeoutMs);
             return 0;
         }
@@ -127,25 +127,31 @@ internal sealed class UsbStream : Stream
 }
 
 /// <summary>
-/// Direct USB printing via libusb (LibUsbDotNet), exposed as an ESC-POS <see cref="BasePrinter"/> so
-/// it shares the exact same write queue and Automatic-Status-Back pipeline as the serial/TCP
-/// printers — bytes go out the bulk-OUT endpoint and status comes back on the bulk-IN endpoint, so
-/// the monitor reflects the emulator's reported state for USB too.
+/// Direct USB printing via libusb (LibUsbDotNet): a <see cref="StreamPrinter"/> over the device's
+/// bulk endpoints, so ESC/POS goes out the bulk-OUT endpoint and Automatic Status Back comes back on
+/// the bulk-IN endpoint — the monitor reflects the emulator's reported state for USB too.
 ///
 /// Requires native libusb-1.0 at runtime (macOS: <c>brew install libusb</c>; Debian/Ubuntu:
 /// <c>apt install libusb-1.0-0</c>; bundled on Windows). If it's missing, or the OS already owns the
 /// device (e.g. a print queue has claimed it), construction throws and the caller surfaces the error.
 /// </summary>
-public sealed class UsbPrinter : BasePrinter
+public sealed class UsbPrinter : StreamPrinter
 {
     private const byte EndpointDirectionMask = 0x80; // bit 7 of bEndpointAddress: 0 = OUT, 1 = IN.
     private const byte EndpointTransferTypeMask = 0x03; // low 2 bits of bmAttributes select the transfer type.
 
-    private readonly UsbStream _stream;
-
     static UsbPrinter() => EnsureNativeSearchPath();
 
-    public UsbPrinter(int vid, int pid) : base($"USB {vid:X4}:{pid:X4}")
+    public UsbPrinter(int vid, int pid) : base(OpenDevice(vid, pid), $"USB {vid:X4}:{pid:X4}")
+    {
+    }
+
+    /// <summary>
+    /// Opens the device and claims its first interface, returning a stream over its bulk endpoints.
+    /// Runs before the base constructor, so everything it allocates is either handed to the returned
+    /// stream (which owns it from then on) or released here.
+    /// </summary>
+    private static UsbStream OpenDevice(int vid, int pid)
     {
         EnsureNativeSearchPath();
 
@@ -174,10 +180,9 @@ public sealed class UsbPrinter : BasePrinter
                 catch { reader = null; }
             }
 
-            _stream = new UsbStream(context, devices, device, writer, reader);
-            Writer = new BinaryWriter(_stream);
-            Reader = new BinaryReader(_stream);
-            transferred = true; // _stream now owns the device collection + context.
+            var stream = new UsbStream(context, devices, device, writer, reader);
+            transferred = true; // the stream now owns the device collection + context.
+            return stream;
         }
         finally
         {
@@ -187,11 +192,6 @@ public sealed class UsbPrinter : BasePrinter
                 context.Dispose();
             }
         }
-    }
-
-    protected override void OverridableDispose()
-    {
-        try { _stream?.Dispose(); } catch { /* ignore */ }
     }
 
     /// <summary>Enumerates connected USB devices (vendor/product ids).</summary>

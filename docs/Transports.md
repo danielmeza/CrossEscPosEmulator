@@ -51,6 +51,30 @@ hardware"*.
 needs the native `libusb-1.0` at runtime (`brew install libusb`, `apt install libusb-1.0-0`; bundled on
 Windows).
 
+Unlike the two servers above it is the *host* side of the conversation, so it is a `StreamPrinter`:
+ESC/POS goes out through `Send` (the `IPrinterResponder` method, split into 15,000-byte writes), and
+the printer's Automatic Status Back blocks come back on `StatusFrameReceived`, one raw 4-byte block
+at a time. `CrossEscPos.Emulator.AutoStatusBackReader.Parse` turns a block into a
+`PrinterStatusReport`.
+
+```csharp
+using var usb = new UsbPrinter(vid: 0x04B8, pid: 0x0202);
+usb.StatusFrameReceived += frame =>
+{
+    if (AutoStatusBackReader.Parse(frame) is { } status)
+        Console.WriteLine($"online={status.Online} paper-out={status.PaperOut}");
+};
+usb.Send(escPosBytes);
+```
+
+`StreamPrinter` works over any `Stream`, so the same write splitting and status framing can drive a
+device node or a test double without USB. A stream that cannot be read is treated as send-only and
+no status thread is started.
+
+> **This replaced a dependency on ESCPOS_NET**, which `UsbPrinter` used to inherit its stream pump
+> and status parse from. See [Packages → Breaking changes](Packages.md#breaking-changes) for what a
+> consumer holding a `UsbPrinter` has to change.
+
 ## Lifetime & threading
 
 Start transports after constructing the printer and stop them on shutdown. Receive happens on a

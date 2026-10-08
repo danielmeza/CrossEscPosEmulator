@@ -19,5 +19,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/CrossEscPos.Controls.Tests/CrossEscPos.Controls.Tests.csproj" />
     <Project Path="tests/CrossEscPos.Core.Tests/CrossEscPos.Core.Tests.csproj" />
+    <Project Path="tests/CrossEscPos.Transports.Tests/CrossEscPos.Transports.Tests.csproj" />
   </Folder>
 </Solution>

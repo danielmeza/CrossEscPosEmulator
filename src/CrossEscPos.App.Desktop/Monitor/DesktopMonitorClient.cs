@@ -7,21 +7,28 @@ using ESCPOS_NET;
 using ESCPOS_NET.Emitters;
 using CrossEscPos.App.Monitor;
 using CrossEscPos.App.Transports;
+using CrossEscPos.Emulator;
 using CrossEscPos.Transports;
 
 namespace CrossEscPos.App.Desktop.Monitor;
 
 /// <summary>
-/// Desktop <see cref="IMonitorClient"/>: connects to the emulator/printer over TCP, serial, or USB using
-/// ESC-POS-.NET's <see cref="BasePrinter"/> family. Enables Automatic Status Back on connect and maps the
-/// library's parsed <see cref="PrinterStatusEventArgs"/> onto the shared <see cref="MonitorStatus"/>.
+/// Desktop <see cref="IMonitorClient"/>: connects to the emulator/printer over TCP, serial, or USB,
+/// enables Automatic Status Back on connect, and reports the printer's status as
+/// <see cref="MonitorStatus"/>.
+///
+/// The transports do not share a base type: TCP and serial use ESC-POS-.NET's
+/// <see cref="BasePrinter"/> family, which parses the status channel itself into
+/// <see cref="PrinterStatusEventArgs"/>, while USB is this repository's own
+/// <see cref="UsbPrinter"/>, which hands the raw 4-byte block over for
+/// <see cref="AutoStatusBackReader"/> to decode. <see cref="IPrinterLink"/> is where the two meet.
 /// </summary>
 public sealed class DesktopMonitorClient : IMonitorClient
 {
     private const string Tcp = "TCP", Serial = "Serial", Usb = "USB";
 
     private readonly EPSON _e = new();
-    private BasePrinter? _printer;
+    private IPrinterLink? _link;
 
     // TCP fields.
     private readonly TransportField _host = new("Host", "127.0.0.1");
@@ -120,7 +127,7 @@ public sealed class DesktopMonitorClient : IMonitorClient
             case Usb:
                 if (!_usbByDisplay.TryGetValue(_usbDevice.Value ?? "", out var dev))
                     throw new InvalidOperationException("No USB device selected.");
-                _printer = new UsbPrinter(dev.Vid, dev.Pid);
+                _link = new UsbLink(new UsbPrinter(dev.Vid, dev.Pid), RaiseStatus);
                 target = dev.Display;
                 break;
 
@@ -128,25 +135,25 @@ public sealed class DesktopMonitorClient : IMonitorClient
                 if (string.IsNullOrWhiteSpace(_serialPort.Value))
                     throw new InvalidOperationException("No serial port selected.");
                 int baud = int.TryParse(_baud.Value, out var b) && b > 0 ? b : 9600;
-                _printer = new SerialPrinter(portName: _serialPort.Value, baudRate: baud);
+                _link = new EscPosNetLink(
+                    new SerialPrinter(portName: _serialPort.Value, baudRate: baud), RaiseStatus);
                 target = $"serial {_serialPort.Value} @ {baud}";
                 break;
 
             default: // TCP
-                _printer = new NetworkPrinter(new NetworkPrinterSettings
+                _link = new EscPosNetLink(new NetworkPrinter(new NetworkPrinterSettings
                 {
                     ConnectionString = $"{_host.Value}:{_port.Value}",
                     PrinterName = "Monitor"
-                });
+                }), RaiseStatus);
                 target = $"{_host.Value}:{_port.Value}";
                 break;
         }
 
         try
         {
-            _printer.StatusChanged += OnStatusChanged;
             // Ask the emulator to push status on every state change (panel toggles show up here).
-            _printer.Write(_e.EnableAutomaticStatusBack());
+            _link.Write(_e.EnableAutomaticStatusBack());
         }
         catch (Exception ex)
         {
@@ -161,35 +168,93 @@ public sealed class DesktopMonitorClient : IMonitorClient
 
     public Task SendAsync(byte[] data)
     {
-        var printer = _printer ?? throw new InvalidOperationException("Not connected.");
-        return Task.Run(() => printer.Write(data));
+        var link = _link ?? throw new InvalidOperationException("Not connected.");
+        return Task.Run(() => link.Write(data));
     }
 
     public void Disconnect()
     {
-        try
-        {
-            if (_printer is not null)
-            {
-                _printer.StatusChanged -= OnStatusChanged;
-                _printer.Dispose();
-            }
-        }
+        try { _link?.Dispose(); }
         catch { /* ignore */ }
-        _printer = null;
+        _link = null;
     }
 
-    private void OnStatusChanged(object? sender, EventArgs e)
+    private void RaiseStatus(MonitorStatus status) => StatusReceived?.Invoke(status);
+
+    /// <summary>The connected printer, whichever transport it arrived over.</summary>
+    private interface IPrinterLink : IDisposable
     {
-        if (e is not PrinterStatusEventArgs s)
-            return;
-        StatusReceived?.Invoke(new MonitorStatus(
-            Online: s.IsPrinterOnline == true,
-            PaperOut: s.IsPaperOut == true,
-            PaperLow: s.IsPaperLow == true,
-            CoverOpen: s.IsCoverOpen == true,
-            DrawerOpen: s.IsCashDrawerOpen == true,
-            Error: s.IsInErrorState == true));
+        void Write(byte[] data);
+    }
+
+    /// <summary>
+    /// TCP and serial, over ESC-POS-.NET. The library owns the status channel and raises its own
+    /// parsed <see cref="PrinterStatusEventArgs"/>, which is mapped onto the shared snapshot here.
+    /// </summary>
+    private sealed class EscPosNetLink : IPrinterLink
+    {
+        private readonly BasePrinter _printer;
+        private readonly Action<MonitorStatus> _onStatus;
+
+        public EscPosNetLink(BasePrinter printer, Action<MonitorStatus> onStatus)
+        {
+            _printer = printer;
+            _onStatus = onStatus;
+            _printer.StatusChanged += OnStatusChanged;
+        }
+
+        public void Write(byte[] data) => _printer.Write(data);
+
+        private void OnStatusChanged(object? sender, EventArgs e)
+        {
+            if (e is not PrinterStatusEventArgs s)
+                return;
+            _onStatus(new MonitorStatus(
+                Online: s.IsPrinterOnline == true,
+                PaperOut: s.IsPaperOut == true,
+                PaperLow: s.IsPaperLow == true,
+                CoverOpen: s.IsCoverOpen == true,
+                DrawerOpen: s.IsCashDrawerOpen == true,
+                Error: s.IsInErrorState == true));
+        }
+
+        public void Dispose()
+        {
+            _printer.StatusChanged -= OnStatusChanged;
+            _printer.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// USB, over this repository's own transport. It frames the status channel into ASB blocks but
+    /// leaves the meaning of the bits to <see cref="AutoStatusBackReader"/> — the same decode the
+    /// browser head uses, so both heads report a given block identically.
+    /// </summary>
+    private sealed class UsbLink : IPrinterLink
+    {
+        private readonly UsbPrinter _printer;
+        private readonly Action<MonitorStatus> _onStatus;
+
+        public UsbLink(UsbPrinter printer, Action<MonitorStatus> onStatus)
+        {
+            _printer = printer;
+            _onStatus = onStatus;
+            _printer.StatusFrameReceived += OnStatusFrame;
+        }
+
+        public void Write(byte[] data) => _printer.Send(data);
+
+        private void OnStatusFrame(byte[] frame)
+        {
+            if (MonitorStatus.From(AutoStatusBackReader.Parse(frame)) is { } status)
+                _onStatus(status);
+        }
+
+        public void Dispose()
+        {
+            _printer.StatusFrameReceived -= OnStatusFrame;
+            _printer.Dispose();
+        }
     }
 
     /// <summary>True when an exception was caused by libusb not being loadable.</summary>
